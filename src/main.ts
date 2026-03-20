@@ -26,6 +26,14 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   app.enableCors();
 
+  app.use((req, res, next) => {
+    res.status(404).json({
+      statusCode: 404,
+      message: `Rota ${req.method} ${req.url} não encontrada`,
+      error: 'Not Found',
+    });
+  });
+
   await app.listen(env.PORT);
 }
 bootstrap();

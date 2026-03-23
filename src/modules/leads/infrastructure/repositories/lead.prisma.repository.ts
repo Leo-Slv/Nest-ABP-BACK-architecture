@@ -16,51 +16,35 @@ import { Lead } from '../../domain/entities/lead.entity.js';
 export class LeadPrismaRepository implements ILeadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    name: string;
-    email: string;
-    phone?: string | null;
-    source?: string | null;
-    status?: LeadStatus;
-    notes?: string | null;
-  }): Promise<Lead> {
+  async create(lead: Lead): Promise<Lead> {
+    const data = lead.toPersistence();
     const created = await this.prisma.lead.create({
       data: {
+        id: data.id,
         name: data.name,
         email: data.email,
-        phone: data.phone ?? null,
-        source: data.source ?? null,
-        status: data.status ?? LeadStatus.NEW,
-        notes: data.notes ?? null,
+        phone: data.phone,
+        source: data.source,
+        status: data.status,
+        notes: data.notes,
       },
     });
     return LeadMapper.toDomain(created);
   }
 
-  async update(
-    id: string,
-    data: Partial<{
-      name: string;
-      email: string;
-      phone: string | null;
-      source: string | null;
-      status: LeadStatus;
-      notes: string | null;
-      contactId: string | null;
-      convertedAt: Date | null;
-    }>,
-  ): Promise<Lead> {
+  async update(lead: Lead): Promise<Lead> {
+    const data = lead.toPersistence();
     const updated = await this.prisma.lead.update({
-      where: { id },
+      where: { id: lead.id },
       data: {
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.email !== undefined && { email: data.email }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.source !== undefined && { source: data.source }),
-        ...(data.status !== undefined && { status: data.status }),
-        ...(data.notes !== undefined && { notes: data.notes }),
-        ...(data.contactId !== undefined && { contactId: data.contactId }),
-        ...(data.convertedAt !== undefined && { convertedAt: data.convertedAt }),
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        source: data.source,
+        status: data.status,
+        notes: data.notes,
+        contactId: data.contactId,
+        convertedAt: data.convertedAt,
       },
     });
     return LeadMapper.toDomain(updated);

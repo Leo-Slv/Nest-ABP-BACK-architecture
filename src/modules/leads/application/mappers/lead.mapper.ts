@@ -1,15 +1,23 @@
+import { Email } from '../../../contacts/domain/value-objects/email.vo.js';
+import { Phone } from '../../../contacts/domain/value-objects/phone.vo.js';
 import { Lead } from '../../domain/entities/lead.entity.js';
+import { LeadStatus } from '../../domain/enums/lead-status.enum.js';
+import { LeadSource } from '../../domain/value-objects/lead-source.vo.js';
 import type { Lead as PrismaLead } from '@prisma/client';
 
 export class LeadMapper {
   static toDomain(prisma: PrismaLead): Lead {
-    return Lead.create({
+    const email = new Email(prisma.email);
+    const phone = prisma.phone ? new Phone(prisma.phone) : null;
+    const source = prisma.source ? new LeadSource(prisma.source) : null;
+
+    return Lead.reconstitute({
       id: prisma.id,
       name: prisma.name,
-      email: prisma.email,
-      phone: prisma.phone ?? null,
-      source: prisma.source ?? null,
-      status: prisma.status as Lead['props']['status'],
+      email,
+      phone,
+      source,
+      status: prisma.status as LeadStatus,
       notes: prisma.notes ?? null,
       convertedAt: prisma.convertedAt ?? null,
       contactId: prisma.contactId ?? null,

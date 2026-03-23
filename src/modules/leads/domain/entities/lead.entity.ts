@@ -1,23 +1,76 @@
+import { randomUUID } from 'node:crypto';
+import { AggregateRoot } from '../../../../shared/domain/aggregate-root.js';
 import { LeadStatus } from '../enums/lead-status.enum.js';
+import type { Email } from '../../../contacts/domain/value-objects/email.vo.js';
+import type { Phone } from '../../../contacts/domain/value-objects/phone.vo.js';
+import type { LeadSource } from '../value-objects/lead-source.vo.js';
+import { LeadCreatedEvent } from '../events/lead-created.event.js';
+import { LeadUpdatedEvent } from '../events/lead-updated.event.js';
 
-export interface LeadEntity {
-  readonly id: string;
-  readonly name: string;
-  readonly email: string;
-  readonly phone: string | null;
-  readonly source: string | null;
-  readonly status: LeadStatus;
-  readonly notes: string | null;
-  readonly convertedAt: Date | null;
-  readonly contactId: string | null;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+export interface LeadProps {
+  id: string;
+  name: string;
+  email: Email;
+  phone: Phone | null;
+  source: LeadSource | null;
+  status: LeadStatus;
+  notes: string | null;
+  convertedAt: Date | null;
+  contactId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export class Lead {
-  private constructor(readonly props: LeadEntity) {}
+/**
+ * Lead Aggregate Root.
+ * All modifications to Lead must go through this aggregate.
+ * Other aggregates are referenced only by ID (e.g., contactId).
+ */
+export class Lead extends AggregateRoot {
+  private constructor(private readonly props: LeadProps) {
+    super();
+  }
 
-  static create(props: LeadEntity): Lead {
+  static create(props: {
+    name: string;
+    email: Email;
+    phone?: Phone | null;
+    source?: LeadSource | null;
+    status?: LeadStatus;
+    notes?: string | null;
+  }): Lead {
+    const id = randomUUID();
+    const now = new Date();
+    const lead = new Lead({
+      id,
+      name: props.name,
+      email: props.email,
+      phone: props.phone ?? null,
+      source: props.source ?? null,
+      status: props.status ?? LeadStatus.NEW,
+      notes: props.notes ?? null,
+      convertedAt: null,
+      contactId: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    lead.addDomainEvent(new LeadCreatedEvent(id));
+    return lead;
+  }
+
+  static reconstitute(props: {
+    id: string;
+    name: string;
+    email: Email;
+    phone: Phone | null;
+    source: LeadSource | null;
+    status: LeadStatus;
+    notes: string | null;
+    convertedAt: Date | null;
+    contactId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): Lead {
     return new Lead(props);
   }
 
@@ -29,16 +82,28 @@ export class Lead {
     return this.props.name;
   }
 
-  get email(): string {
+  get email(): Email {
     return this.props.email;
   }
 
-  get phone(): string | null {
+  get emailValue(): string {
+    return this.props.email.value;
+  }
+
+  get phone(): Phone | null {
     return this.props.phone;
   }
 
-  get source(): string | null {
+  get phoneValue(): string | null {
+    return this.props.phone?.value ?? null;
+  }
+
+  get source(): LeadSource | null {
     return this.props.source;
+  }
+
+  get sourceValue(): string | null {
+    return this.props.source?.value ?? null;
   }
 
   get status(): LeadStatus {
@@ -63,5 +128,71 @@ export class Lead {
 
   get updatedAt(): Date {
     return this.props.updatedAt;
+  }
+
+  changeEmail(email: Email): void {
+    (this.props as { email: Email }).email = email;
+    this.addDomainEvent(new LeadUpdatedEvent(this.id));
+  }
+
+  changeName(name: string): void {
+    if (!name?.trim()) return;
+    (this.props as { name: string }).name = name.trim();
+    this.addDomainEvent(new LeadUpdatedEvent(this.id));
+  }
+
+  changePhone(phone: Phone | null): void {
+    (this.props as { phone: Phone | null }).phone = phone;
+    this.addDomainEvent(new LeadUpdatedEvent(this.id));
+  }
+
+  changeSource(source: LeadSource | null): void {
+    (this.props as { source: LeadSource | null }).source = source;
+    this.addDomainEvent(new LeadUpdatedEvent(this.id));
+  }
+
+  changeStatus(status: LeadStatus): void {
+    (this.props as { status: LeadStatus }).status = status;
+    this.addDomainEvent(new LeadUpdatedEvent(this.id));
+  }
+
+  changeNotes(notes: string | null): void {
+    (this.props as { notes: string | null }).notes = notes;
+    this.addDomainEvent(new LeadUpdatedEvent(this.id));
+  }
+
+  markAsConverted(contactId: string): void {
+    (this.props as { contactId: string | null }).contactId = contactId;
+    (this.props as { convertedAt: Date | null }).convertedAt = new Date();
+    (this.props as { status: LeadStatus }).status = LeadStatus.CONVERTED;
+  }
+
+  /** Snapshot for persistence - use getters to avoid exposing mutable props */
+  toPersistence(): {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    source: string | null;
+    status: LeadStatus;
+    notes: string | null;
+    convertedAt: Date | null;
+    contactId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  } {
+    return {
+      id: this.props.id,
+      name: this.props.name,
+      email: this.props.email.value,
+      phone: this.phoneValue,
+      source: this.sourceValue,
+      status: this.props.status,
+      notes: this.props.notes,
+      convertedAt: this.props.convertedAt,
+      contactId: this.props.contactId,
+      createdAt: this.props.createdAt,
+      updatedAt: this.props.updatedAt,
+    };
   }
 }

@@ -16,27 +16,8 @@ export interface ListLeadsResult {
 }
 
 export interface ILeadRepository {
-  create(data: {
-    name: string;
-    email: string;
-    phone?: string | null;
-    source?: string | null;
-    status?: LeadStatus;
-    notes?: string | null;
-  }): Promise<Lead>;
-  update(
-    id: string,
-    data: Partial<{
-      name: string;
-      email: string;
-      phone: string | null;
-      source: string | null;
-      status: LeadStatus;
-      notes: string | null;
-      contactId: string | null;
-      convertedAt: Date | null;
-    }>,
-  ): Promise<Lead>;
+  create(lead: Lead): Promise<Lead>;
+  update(lead: Lead): Promise<Lead>;
   delete(id: string): Promise<void>;
   findById(id: string): Promise<Lead | null>;
   findByEmail(email: string): Promise<Lead | null>;

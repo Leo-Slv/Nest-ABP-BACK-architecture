@@ -1,10 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ConflictError } from '../../../../shared/errors/conflict.error.js';
 import { NotFoundError } from '../../../../shared/errors/not-found.error.js';
-import { Lead } from '../../domain/entities/lead.entity.js';
+import type { IDomainEventDispatcher } from '../../../../shared/domain/domain-event-dispatcher.js';
 import { Email } from '../../../contacts/domain/value-objects/email.vo.js';
 import { Phone } from '../../../contacts/domain/value-objects/phone.vo.js';
+import { Lead } from '../../domain/entities/lead.entity.js';
 import { LeadSource } from '../../domain/value-objects/lead-source.vo.js';
+import { LeadEmailUniqueSpec } from '../../domain/specifications/lead-email-unique.specification.js';
 import type { ILeadRepository } from '../../domain/repositories/lead.repository.js';
 import type { UpdateLeadDto } from '../dtos/update-lead.dto.js';
 import { LeadStatus } from '../../domain/enums/lead-status.enum.js';
@@ -14,6 +16,9 @@ export class UpdateLeadUseCase {
   constructor(
     @Inject('ILeadRepository')
     private readonly repository: ILeadRepository,
+    private readonly emailUniqueSpec: LeadEmailUniqueSpec,
+    @Inject('IDomainEventDispatcher')
+    private readonly eventDispatcher: IDomainEventDispatcher,
   ) {}
 
   async execute(id: string, dto: UpdateLeadDto): Promise<Lead> {
@@ -26,23 +31,30 @@ export class UpdateLeadUseCase {
       throw new ConflictError('Lead já convertido não pode ser editado');
     }
 
-    if (dto.email && dto.email !== lead.email) {
-      const existing = await this.repository.findByEmail(dto.email);
-      if (existing) {
+    if (dto.email && dto.email !== lead.emailValue) {
+      const emailUnique = await this.emailUniqueSpec.isSatisfiedBy(
+        dto.email,
+        id,
+      );
+      if (!emailUnique) {
         throw new ConflictError(`Lead com email ${dto.email} já existe`);
       }
-      new Email(dto.email);
+      lead.changeEmail(new Email(dto.email));
     }
-    if (dto.phone !== undefined && dto.phone) new Phone(dto.phone);
-    if (dto.source) new LeadSource(dto.source);
+    if (dto.name !== undefined) lead.changeName(dto.name);
+    if (dto.phone !== undefined) {
+      lead.changePhone(dto.phone ? new Phone(dto.phone) : null);
+    }
+    if (dto.source !== undefined) {
+      lead.changeSource(dto.source ? new LeadSource(dto.source) : null);
+    }
+    if (dto.status !== undefined) lead.changeStatus(dto.status as LeadStatus);
+    if (dto.notes !== undefined) lead.changeNotes(dto.notes);
 
-    return this.repository.update(id, {
-      name: dto.name ?? lead.name,
-      email: dto.email ?? lead.email,
-      phone: dto.phone !== undefined ? dto.phone : lead.phone,
-      source: dto.source !== undefined ? dto.source : lead.source,
-      status: dto.status !== undefined ? (dto.status as LeadStatus) : lead.status,
-      notes: dto.notes !== undefined ? dto.notes : lead.notes,
-    });
+    const saved = await this.repository.update(lead);
+    const events = lead.getDomainEvents();
+    await this.eventDispatcher.dispatch(events);
+
+    return saved;
   }
 }

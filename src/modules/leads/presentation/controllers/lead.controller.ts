@@ -143,9 +143,9 @@ export class LeadController {
   private toResponse(lead: {
     id: string;
     name: string;
-    email: string;
-    phone: string | null;
-    source: string | null;
+    emailValue: string;
+    phoneValue: string | null;
+    sourceValue: string | null;
     status: string;
     notes: string | null;
     convertedAt: Date | null;
@@ -156,9 +156,9 @@ export class LeadController {
     return {
       id: lead.id,
       name: lead.name,
-      email: lead.email,
-      phone: lead.phone,
-      source: lead.source,
+      email: lead.emailValue,
+      phone: lead.phoneValue,
+      source: lead.sourceValue,
       status: lead.status,
       notes: lead.notes,
       convertedAt: lead.convertedAt,

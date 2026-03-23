@@ -3,6 +3,9 @@ import { PrismaModule } from '../../shared/database/prisma.module.js';
 import { ContactsModule } from '../contacts/contacts.module.js';
 import { LeadController } from './presentation/controllers/lead.controller.js';
 import { LeadPrismaRepository } from './infrastructure/repositories/lead.prisma.repository.js';
+import { LeadFactory } from './domain/factories/lead.factory.js';
+import { LeadEmailUniqueSpec } from './domain/specifications/lead-email-unique.specification.js';
+import { LeadCreatedEventHandler } from './application/handlers/lead-created.handler.js';
 import { CreateLeadUseCase } from './application/use-cases/create-lead.usecase.js';
 import { UpdateLeadUseCase } from './application/use-cases/update-lead.usecase.js';
 import { DeleteLeadUseCase } from './application/use-cases/delete-lead.usecase.js';
@@ -18,6 +21,9 @@ import { ConvertLeadUseCase } from './application/use-cases/convert-lead.usecase
       provide: 'ILeadRepository',
       useClass: LeadPrismaRepository,
     },
+    LeadFactory,
+    LeadEmailUniqueSpec,
+    LeadCreatedEventHandler,
     CreateLeadUseCase,
     UpdateLeadUseCase,
     DeleteLeadUseCase,

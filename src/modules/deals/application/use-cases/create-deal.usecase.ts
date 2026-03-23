@@ -1,29 +1,25 @@
 import { Injectable, Inject } from '@nestjs/common';
+import type { IDomainEventDispatcher } from '../../../../shared/domain/domain-event-dispatcher.js';
 import { Deal } from '../../domain/entities/deal.entity.js';
-import { DealValue } from '../../domain/value-objects/deal-value.vo.js';
+import { DealFactory } from '../../domain/factories/deal.factory.js';
 import type { IDealRepository } from '../../domain/repositories/deal.repository.js';
 import type { CreateDealDto } from '../dtos/create-deal.dto.js';
-import { DealStage } from '../../domain/enums/deal-stage.enum.js';
 
 @Injectable()
 export class CreateDealUseCase {
   constructor(
     @Inject('IDealRepository')
     private readonly repository: IDealRepository,
+    private readonly factory: DealFactory,
+    @Inject('IDomainEventDispatcher')
+    private readonly eventDispatcher: IDomainEventDispatcher,
   ) {}
 
   async execute(dto: CreateDealDto): Promise<Deal> {
-    const value = dto.value !== undefined ? new DealValue(dto.value).value : 0;
+    const deal = this.factory.create(dto);
 
-    return this.repository.create({
-      title: dto.title,
-      value,
-      stage: dto.stage ?? DealStage.LEAD,
-      pipelineId: dto.pipelineId ?? null,
-      pipelineStageId: dto.pipelineStageId ?? null,
-      contactId: dto.contactId ?? null,
-      companyId: dto.companyId ?? null,
-      expectedAt: dto.expectedAt ? new Date(dto.expectedAt) : null,
-    });
+    const saved = await this.repository.create(deal);
+    await this.eventDispatcher.dispatch(deal.getDomainEvents());
+    return saved;
   }
 }

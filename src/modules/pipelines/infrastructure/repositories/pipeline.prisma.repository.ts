@@ -1,26 +1,27 @@
 import { Injectable } from '@nestjs/common';
+import { PipelineNotFoundError } from '../../../../shared/errors/pipeline-not-found.error.js';
 import { PrismaService } from '../../../../shared/database/prisma.service.js';
 import { PipelineMapper } from '../../application/mappers/pipeline.mapper.js';
 import type {
   IPipelineRepository,
   ListPipelinesResult,
 } from '../../domain/repositories/pipeline.repository.js';
+import { Pipeline } from '../../domain/entities/pipeline.entity.js';
 
 @Injectable()
 export class PipelinePrismaRepository implements IPipelineRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    name: string;
-    stages?: { name: string; order: number }[];
-  }): Promise<import('../../domain/entities/pipeline.entity.js').Pipeline> {
+  async create(pipeline: Pipeline): Promise<Pipeline> {
+    const stages = pipeline.getPendingStagesForCreate();
     const created = await this.prisma.pipeline.create({
       data: {
-        name: data.name,
+        id: pipeline.id,
+        name: pipeline.name,
         stages:
-          data.stages?.length ?? 0 > 0
+          stages.length > 0
             ? {
-                create: data.stages!.map((s) => ({ name: s.name, order: s.order })),
+                create: stages.map((s) => ({ name: s.name, order: s.order })),
               }
             : undefined,
       },
@@ -29,12 +30,12 @@ export class PipelinePrismaRepository implements IPipelineRepository {
     return PipelineMapper.toDomain(created);
   }
 
-  async update(id: string, data: { name?: string }): Promise<import('../../domain/entities/pipeline.entity.js').Pipeline> {
-    const existing = await this.prisma.pipeline.findUnique({ where: { id } });
-    if (!existing) throw new Error('Pipeline not found');
+  async update(pipeline: Pipeline): Promise<Pipeline> {
+    const existing = await this.prisma.pipeline.findUnique({ where: { id: pipeline.id } });
+    if (!existing) throw new PipelineNotFoundError(pipeline.id);
     const updated = await this.prisma.pipeline.update({
-      where: { id },
-      data: { name: data.name ?? existing.name },
+      where: { id: pipeline.id },
+      data: { name: pipeline.name },
       include: { stages: true },
     });
     return PipelineMapper.toDomain(updated);
@@ -44,7 +45,7 @@ export class PipelinePrismaRepository implements IPipelineRepository {
     await this.prisma.pipeline.delete({ where: { id } });
   }
 
-  async findById(id: string): Promise<import('../../domain/entities/pipeline.entity.js').Pipeline | null> {
+  async findById(id: string): Promise<Pipeline | null> {
     const found = await this.prisma.pipeline.findUnique({
       where: { id },
       include: { stages: true },

@@ -1,7 +1,8 @@
 import { Lead } from './lead.entity.js';
 import { LeadStatus } from '../enums/lead-status.enum.js';
-import { Email } from '../../../contacts/domain/value-objects/email.vo.js';
-import { Phone } from '../../../contacts/domain/value-objects/phone.vo.js';
+import { Name } from '../../../../shared/domain/value-objects/name.vo.js';
+import { Email } from '../../../../shared/domain/value-objects/email.vo.js';
+import { Phone } from '../../../../shared/domain/value-objects/phone.vo.js';
 import { LeadSource } from '../value-objects/lead-source.vo.js';
 
 describe('Lead Aggregate', () => {
@@ -12,7 +13,7 @@ describe('Lead Aggregate', () => {
   describe('create', () => {
     it('should create a lead with required fields', () => {
       const lead = Lead.create({
-        name: 'John Doe',
+        name: new Name('John Doe'),
         email: validEmail,
       });
 
@@ -31,7 +32,7 @@ describe('Lead Aggregate', () => {
 
     it('should create a lead with optional fields', () => {
       const lead = Lead.create({
-        name: 'Jane Doe',
+        name: new Name('Jane Doe'),
         email: validEmail,
         phone: validPhone,
         source: validSource,
@@ -47,15 +48,15 @@ describe('Lead Aggregate', () => {
     });
 
     it('should generate unique ids', () => {
-      const lead1 = Lead.create({ name: 'A', email: validEmail });
-      const lead2 = Lead.create({ name: 'B', email: new Email('b@x.com') });
+      const lead1 = Lead.create({ name: new Name('AA'), email: validEmail });
+      const lead2 = Lead.create({ name: new Name('BB'), email: new Email('b@x.com') });
       expect(lead1.id).not.toBe(lead2.id);
     });
   });
 
   describe('change methods', () => {
     it('should change email and add LeadUpdatedEvent', () => {
-      const lead = Lead.create({ name: 'Test', email: validEmail });
+      const lead = Lead.create({ name: new Name('Test'), email: validEmail });
       lead.clearEvents();
 
       const newEmail = new Email('new@example.com');
@@ -67,21 +68,21 @@ describe('Lead Aggregate', () => {
     });
 
     it('should change name', () => {
-      const lead = Lead.create({ name: 'Old', email: validEmail });
+      const lead = Lead.create({ name: new Name('Old'), email: validEmail });
       lead.clearEvents();
-      lead.changeName('New Name');
+      lead.changeName(new Name('New Name'));
       expect(lead.name).toBe('New Name');
     });
 
     it('should change phone', () => {
-      const lead = Lead.create({ name: 'Test', email: validEmail });
+      const lead = Lead.create({ name: new Name('Test'), email: validEmail });
       lead.clearEvents();
       lead.changePhone(validPhone);
       expect(lead.phoneValue).toBe('11999999999');
     });
 
     it('should change status', () => {
-      const lead = Lead.create({ name: 'Test', email: validEmail });
+      const lead = Lead.create({ name: new Name('Test'), email: validEmail });
       lead.clearEvents();
       lead.changeStatus(LeadStatus.CONTACTED);
       expect(lead.status).toBe(LeadStatus.CONTACTED);
@@ -90,7 +91,7 @@ describe('Lead Aggregate', () => {
     it('should mark as converted', () => {
       const lead = Lead.reconstitute({
         id: 'test-id',
-        name: 'Test',
+        name: new Name('Test'),
         email: validEmail,
         phone: null,
         source: null,
@@ -111,7 +112,7 @@ describe('Lead Aggregate', () => {
   describe('toPersistence', () => {
     it('should export persistence snapshot', () => {
       const lead = Lead.create({
-        name: 'Test',
+        name: new Name('Test'),
         email: validEmail,
         phone: validPhone,
       });

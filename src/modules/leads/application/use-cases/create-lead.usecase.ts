@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ConflictError } from '../../../../shared/errors/conflict.error.js';
+import { Email } from '../../../../shared/domain/value-objects/email.vo.js';
 import type { IDomainEventDispatcher } from '../../../../shared/domain/domain-event-dispatcher.js';
 import { Lead } from '../../domain/entities/lead.entity.js';
 import { LeadEmailUniqueSpec } from '../../domain/specifications/lead-email-unique.specification.js';
@@ -19,9 +20,10 @@ export class CreateLeadUseCase {
   ) {}
 
   async execute(dto: CreateLeadDto): Promise<Lead> {
-    const emailUnique = await this.emailUniqueSpec.isSatisfiedBy(dto.email);
+    const email = new Email(dto.email);
+    const emailUnique = await this.emailUniqueSpec.isSatisfiedBy(email);
     if (!emailUnique) {
-      throw new ConflictError(`Lead com email ${dto.email} já existe`);
+      throw new ConflictError(`Lead com email ${email.value} já existe`);
     }
 
     const lead = this.factory.create({

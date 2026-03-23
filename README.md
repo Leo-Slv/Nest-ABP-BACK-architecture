@@ -11,7 +11,7 @@ API de CRM construída em NestJS seguindo **Clean Architecture** com módulos in
 | Tecnologia   | Uso                          |
 |-------------|------------------------------|
 | **NestJS**  | Framework backend            |
-| **Prisma**  | ORM + migrations (PostgreSQL)|
+| **Prisma**  | ORM + `schema.prisma` (PostgreSQL; sync com `db push`) |
 | **nestjs-zod** | Validação e integração Swagger |
 | **Swagger** | Documentação da API          |
 | **Zod**     | Schema e validação em runtime|
@@ -19,7 +19,7 @@ API de CRM construída em NestJS seguindo **Clean Architecture** com módulos in
 ## Pré-requisitos
 
 - Node.js 20+
-- PostgreSQL em execução
+- Docker Desktop (ou outro runtime com `docker compose`) — para subir PostgreSQL local
 - npm ou pnpm
 
 ## Como Rodar
@@ -30,23 +30,34 @@ API de CRM construída em NestJS seguindo **Clean Architecture** com módulos in
 npm install
 ```
 
-### 2. Configurar variáveis de ambiente
+### 2. Variáveis de ambiente
 
-Crie um arquivo `.env` na raiz do projeto:
+Na raiz há `.env.example`. Copie para `.env` (o arquivo `.env` não é versionado):
+
+```bash
+# Windows (PowerShell / CMD)
+copy .env.example .env
+
+# Linux / macOS
+cp .env.example .env
+```
+
+Valores padrão alinhados ao `docker-compose.yml`:
 
 ```env
-DATABASE_URL="postgresql://usuario:senha@localhost:5432/crm_db"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/crm_db?schema=public"
 PORT=3000
 NODE_ENV=development
 ```
 
-> Ajuste `usuario`, `senha` e `crm_db` conforme seu ambiente PostgreSQL.
-
-### 3. Rodar as migrations
+### 3. Subir o PostgreSQL e criar tabelas
 
 ```bash
-npx prisma migrate dev --name init_crm
+npm run db:up
+npm run db:push
 ```
+
+O schema fica em `prisma/schema.prisma`; a URL do banco para o CLI (`migrate`, `db push`, `studio`) está em **`prisma.config.ts`** (Prisma 7+). Em runtime, o `PrismaService` usa o adapter **`@prisma/adapter-pg`**. Não há pasta `migrations` — o banco é atualizado com `prisma db push` (adequado para dev/preview).
 
 ### 4. Iniciar a aplicação
 
@@ -75,7 +86,10 @@ npm run start:prod
 | `npm run build`   | Compila o projeto                   |
 | `npm run start:prod` | Inicia versão compilada          |
 | `npm run lint`    | Executa ESLint                      |
-| `npx prisma studio` | Abre interface visual do banco   |
+| `npm run db:up`   | Sobe PostgreSQL (Docker Compose)    |
+| `npm run db:down` | Para e remove containers do banco   |
+| `npm run db:push` | Aplica `schema.prisma` ao banco     |
+| `npm run db:studio` | Abre Prisma Studio               |
 
 ## Estrutura da Arquitetura (Preview)
 

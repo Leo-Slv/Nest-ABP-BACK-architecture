@@ -3,7 +3,7 @@ import type { Contact as PrismaContact } from '@prisma/client';
 
 export class ContactMapper {
   static toDomain(prisma: PrismaContact): Contact {
-    return Contact.create({
+    return Contact.reconstitute({
       id: prisma.id,
       name: prisma.name,
       email: prisma.email,
@@ -16,15 +16,16 @@ export class ContactMapper {
   }
 
   static toPersistence(contact: Contact): Omit<PrismaContact, 'createdAt' | 'updatedAt'> & { createdAt: Date; updatedAt: Date } {
+    const p = contact.toPersistence();
     return {
-      id: contact.id,
-      name: contact.name,
-      email: contact.email,
-      phone: contact.phone ?? null,
-      role: contact.role ?? null,
-      companyId: contact.companyId ?? null,
-      createdAt: contact.createdAt,
-      updatedAt: contact.updatedAt,
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      phone: p.phone ?? null,
+      role: p.role ?? null,
+      companyId: p.companyId ?? null,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
     };
   }
 }

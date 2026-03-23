@@ -1,9 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ConflictError } from '../../../../shared/errors/conflict.error.js';
 import { NotFoundError } from '../../../../shared/errors/not-found.error.js';
+import { Name } from '../../../../shared/domain/value-objects/name.vo.js';
+import { Email } from '../../../../shared/domain/value-objects/email.vo.js';
+import { Phone } from '../../../../shared/domain/value-objects/phone.vo.js';
 import type { IDomainEventDispatcher } from '../../../../shared/domain/domain-event-dispatcher.js';
-import { Email } from '../../../contacts/domain/value-objects/email.vo.js';
-import { Phone } from '../../../contacts/domain/value-objects/phone.vo.js';
 import { Lead } from '../../domain/entities/lead.entity.js';
 import { LeadSource } from '../../domain/value-objects/lead-source.vo.js';
 import { LeadEmailUniqueSpec } from '../../domain/specifications/lead-email-unique.specification.js';
@@ -32,16 +33,13 @@ export class UpdateLeadUseCase {
     }
 
     if (dto.email && dto.email !== lead.emailValue) {
-      const emailUnique = await this.emailUniqueSpec.isSatisfiedBy(
-        dto.email,
-        id,
-      );
+      const emailUnique = await this.emailUniqueSpec.isSatisfiedBy(new Email(dto.email), id);
       if (!emailUnique) {
         throw new ConflictError(`Lead com email ${dto.email} já existe`);
       }
       lead.changeEmail(new Email(dto.email));
     }
-    if (dto.name !== undefined) lead.changeName(dto.name);
+    if (dto.name !== undefined) lead.changeName(new Name(dto.name));
     if (dto.phone !== undefined) {
       lead.changePhone(dto.phone ? new Phone(dto.phone) : null);
     }

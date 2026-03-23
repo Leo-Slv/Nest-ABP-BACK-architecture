@@ -14,21 +14,8 @@ export interface ListCompaniesResult {
 }
 
 export interface ICompanyRepository {
-  create(data: {
-    name: string;
-    domain?: string | null;
-    industry?: string | null;
-    website?: string | null;
-  }): Promise<Company>;
-  update(
-    id: string,
-    data: Partial<{
-      name: string;
-      domain: string | null;
-      industry: string | null;
-      website: string | null;
-    }>,
-  ): Promise<Company>;
+  create(company: Company): Promise<Company>;
+  update(company: Company): Promise<Company>;
   delete(id: string): Promise<void>;
   findById(id: string): Promise<Company | null>;
   findByDomain(domain: string): Promise<Company | null>;

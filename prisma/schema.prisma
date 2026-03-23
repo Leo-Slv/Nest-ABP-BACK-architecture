@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Lead {
@@ -133,4 +132,21 @@ enum TaskType {
   MEETING
   FOLLOW_UP
   OTHER
+}
+
+/// Transactional outbox: domain events persisted then processed asynchronously by OutboxEventProcessor.
+model OutboxEvent {
+  id          String            @id @default(uuid())
+  eventName   String
+  payload     Json
+  status      OutboxEventStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  processedAt DateTime?
+  error       String?
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
 }

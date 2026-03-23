@@ -14,14 +14,8 @@ export interface ListContactsResult {
 }
 
 export interface IContactRepository {
-  create(data: {
-    name: string;
-    email: string;
-    phone?: string | null;
-    role?: string | null;
-    companyId?: string | null;
-  }): Promise<Contact>;
-  update(id: string, data: Partial<Contact['props']>): Promise<Contact>;
+  create(contact: Contact): Promise<Contact>;
+  update(contact: Contact): Promise<Contact>;
   delete(id: string): Promise<void>;
   findById(id: string): Promise<Contact | null>;
   findByEmail(email: string): Promise<Contact | null>;

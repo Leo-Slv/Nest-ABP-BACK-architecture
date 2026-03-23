@@ -8,9 +8,7 @@ import {
 import { Response } from 'express';
 import { ZodValidationException } from 'nestjs-zod';
 import { ZodError } from 'zod';
-import { NotFoundError } from '../errors/not-found.error.js';
-import { ConflictError } from '../errors/conflict.error.js';
-import { DomainError } from '../errors/domain-error.js';
+import { AppError } from '../errors/app-error.js';
 
 @Catch(Error)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -23,16 +21,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status: number;
     let message: string;
 
-    if (exception instanceof NotFoundError) {
-      status = HttpStatus.NOT_FOUND;
-      message = exception.message;
-    } else if (exception instanceof ConflictError) {
-      status = HttpStatus.CONFLICT;
-      message = exception.message;
-    } else if (exception instanceof DomainError) {
-      status = HttpStatus.BAD_REQUEST;
-      message = exception.message;
-    } else if (exception instanceof ZodValidationException) {
+    if (exception instanceof ZodValidationException) {
       status = HttpStatus.UNPROCESSABLE_ENTITY;
       const zodError = exception.getZodError();
       const issues = zodError instanceof ZodError ? zodError.issues : [];
@@ -40,6 +29,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
         Array.isArray(issues) && issues.length > 0
           ? issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
           : 'Dados inválidos';
+    } else if (exception instanceof AppError) {
+      status = exception.statusCode;
+      message = exception.message;
     } else {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       message = 'Erro interno do servidor';

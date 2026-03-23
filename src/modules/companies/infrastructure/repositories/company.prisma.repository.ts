@@ -12,14 +12,11 @@ import { Company } from '../../domain/entities/company.entity.js';
 export class CompanyPrismaRepository implements ICompanyRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    name: string;
-    domain?: string | null;
-    industry?: string | null;
-    website?: string | null;
-  }): Promise<Company> {
+  async create(company: Company): Promise<Company> {
+    const data = CompanyMapper.toPersistence(company);
     const created = await this.prisma.company.create({
       data: {
+        id: data.id,
         name: data.name,
         domain: data.domain ?? null,
         industry: data.industry ?? null,
@@ -29,22 +26,15 @@ export class CompanyPrismaRepository implements ICompanyRepository {
     return CompanyMapper.toDomain(created);
   }
 
-  async update(
-    id: string,
-    data: Partial<{
-      name: string;
-      domain: string | null;
-      industry: string | null;
-      website: string | null;
-    }>,
-  ): Promise<Company> {
+  async update(company: Company): Promise<Company> {
+    const data = CompanyMapper.toPersistence(company);
     const updated = await this.prisma.company.update({
-      where: { id },
+      where: { id: company.id },
       data: {
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.domain !== undefined && { domain: data.domain }),
-        ...(data.industry !== undefined && { industry: data.industry }),
-        ...(data.website !== undefined && { website: data.website }),
+        name: data.name,
+        domain: data.domain ?? null,
+        industry: data.industry ?? null,
+        website: data.website ?? null,
       },
     });
     return CompanyMapper.toDomain(updated);

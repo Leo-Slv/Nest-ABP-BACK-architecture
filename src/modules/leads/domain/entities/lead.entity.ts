@@ -1,15 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { AggregateRoot } from '../../../../shared/domain/aggregate-root.js';
+import type { Name } from '../../../../shared/domain/value-objects/name.vo.js';
+import type { Email } from '../../../../shared/domain/value-objects/email.vo.js';
+import type { Phone } from '../../../../shared/domain/value-objects/phone.vo.js';
 import { LeadStatus } from '../enums/lead-status.enum.js';
-import type { Email } from '../../../contacts/domain/value-objects/email.vo.js';
-import type { Phone } from '../../../contacts/domain/value-objects/phone.vo.js';
 import type { LeadSource } from '../value-objects/lead-source.vo.js';
 import { LeadCreatedEvent } from '../events/lead-created.event.js';
 import { LeadUpdatedEvent } from '../events/lead-updated.event.js';
 
 export interface LeadProps {
   id: string;
-  name: string;
+  name: Name;
   email: Email;
   phone: Phone | null;
   source: LeadSource | null;
@@ -32,7 +33,7 @@ export class Lead extends AggregateRoot {
   }
 
   static create(props: {
-    name: string;
+    name: Name;
     email: Email;
     phone?: Phone | null;
     source?: LeadSource | null;
@@ -60,7 +61,7 @@ export class Lead extends AggregateRoot {
 
   static reconstitute(props: {
     id: string;
-    name: string;
+    name: Name;
     email: Email;
     phone: Phone | null;
     source: LeadSource | null;
@@ -79,7 +80,7 @@ export class Lead extends AggregateRoot {
   }
 
   get name(): string {
-    return this.props.name;
+    return this.props.name.value;
   }
 
   get email(): Email {
@@ -135,9 +136,8 @@ export class Lead extends AggregateRoot {
     this.addDomainEvent(new LeadUpdatedEvent(this.id));
   }
 
-  changeName(name: string): void {
-    if (!name?.trim()) return;
-    (this.props as { name: string }).name = name.trim();
+  changeName(name: Name): void {
+    (this.props as { name: Name }).name = name;
     this.addDomainEvent(new LeadUpdatedEvent(this.id));
   }
 
@@ -183,7 +183,7 @@ export class Lead extends AggregateRoot {
   } {
     return {
       id: this.props.id,
-      name: this.props.name,
+      name: this.props.name.value,
       email: this.props.email.value,
       phone: this.phoneValue,
       source: this.sourceValue,

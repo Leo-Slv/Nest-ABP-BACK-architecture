@@ -1,16 +1,24 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { NotFoundError } from '../../../../shared/errors/not-found.error.js';
+import type { IDomainEventDispatcher } from '../../../../shared/domain/domain-event-dispatcher.js';
+import { ContactNotFoundError } from '../../../../shared/errors/contact-not-found.error.js';
 import type { IContactRepository } from '../../domain/repositories/contact.repository.js';
 
 @Injectable()
 export class DeleteContactUseCase {
-  constructor(@Inject('IContactRepository') private readonly repository: IContactRepository) {}
+  constructor(
+    @Inject('IContactRepository') private readonly repository: IContactRepository,
+    @Inject('IDomainEventDispatcher')
+    private readonly eventDispatcher: IDomainEventDispatcher,
+  ) {}
 
   async execute(id: string): Promise<void> {
-    const exists = await this.repository.findById(id);
-    if (!exists) {
-      throw new NotFoundError(`Contato ${id} não encontrado`);
+    const contact = await this.repository.findById(id);
+    if (!contact) {
+      throw new ContactNotFoundError(id);
     }
+    contact.markDeleted();
+    const events = contact.getDomainEvents();
+    await this.eventDispatcher.dispatch(events);
     await this.repository.delete(id);
   }
 }

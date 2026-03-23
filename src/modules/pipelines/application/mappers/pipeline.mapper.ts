@@ -17,7 +17,7 @@ export class PipelineMapper {
   static toDomain(
     prisma: PrismaPipeline & { stages?: PrismaStage[] },
   ): Pipeline {
-    return Pipeline.create({
+    return Pipeline.reconstitute({
       id: prisma.id,
       name: prisma.name,
       createdAt: prisma.createdAt,

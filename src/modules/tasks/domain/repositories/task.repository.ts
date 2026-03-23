@@ -17,32 +17,9 @@ export interface ListTasksResult {
 }
 
 export interface ITaskRepository {
-  create(data: {
-    title: string;
-    description?: string | null;
-    type?: TaskType;
-    dueAt?: Date | null;
-    leadId?: string | null;
-    contactId?: string | null;
-    companyId?: string | null;
-    dealId?: string | null;
-  }): Promise<Task>;
-  update(
-    id: string,
-    data: Partial<{
-      title: string;
-      description: string | null;
-      type: TaskType;
-      dueAt: Date | null;
-      completedAt: Date | null;
-      leadId: string | null;
-      contactId: string | null;
-      companyId: string | null;
-      dealId: string | null;
-    }>,
-  ): Promise<Task>;
+  create(task: Task): Promise<Task>;
+  update(task: Task): Promise<Task>;
   delete(id: string): Promise<void>;
   findById(id: string): Promise<Task | null>;
   list(params: ListTasksParams): Promise<ListTasksResult>;
-  complete(id: string): Promise<Task>;
 }

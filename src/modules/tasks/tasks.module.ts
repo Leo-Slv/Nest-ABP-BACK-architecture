@@ -6,6 +6,11 @@ import { CompaniesModule } from '../companies/companies.module.js';
 import { DealsModule } from '../deals/deals.module.js';
 import { TaskController } from './presentation/controllers/task.controller.js';
 import { TaskPrismaRepository } from './infrastructure/repositories/task.prisma.repository.js';
+import { TaskCreatedEventHandler } from './application/handlers/task-created.handler.js';
+import { TaskUpdatedEventHandler } from './application/handlers/task-updated.handler.js';
+import { TaskCompletedEventHandler } from './application/handlers/task-completed.handler.js';
+import { TaskDeletedEventHandler } from './application/handlers/task-deleted.handler.js';
+import { TaskFactory } from './domain/factories/task.factory.js';
 import { CreateTaskUseCase } from './application/use-cases/create-task.usecase.js';
 import { UpdateTaskUseCase } from './application/use-cases/update-task.usecase.js';
 import { DeleteTaskUseCase } from './application/use-cases/delete-task.usecase.js';
@@ -27,6 +32,11 @@ import { CompleteTaskUseCase } from './application/use-cases/complete-task.useca
       provide: 'ITaskRepository',
       useClass: TaskPrismaRepository,
     },
+    TaskCreatedEventHandler,
+    TaskUpdatedEventHandler,
+    TaskCompletedEventHandler,
+    TaskDeletedEventHandler,
+    TaskFactory,
     CreateTaskUseCase,
     UpdateTaskUseCase,
     DeleteTaskUseCase,

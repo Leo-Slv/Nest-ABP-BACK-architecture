@@ -3,7 +3,7 @@ import type { Company as PrismaCompany } from '@prisma/client';
 
 export class CompanyMapper {
   static toDomain(prisma: PrismaCompany): Company {
-    return Company.create({
+    return Company.reconstitute({
       id: prisma.id,
       name: prisma.name,
       domain: prisma.domain ?? null,
@@ -15,14 +15,15 @@ export class CompanyMapper {
   }
 
   static toPersistence(company: Company) {
+    const p = company.toPersistence();
     return {
-      id: company.id,
-      name: company.name,
-      domain: company.domain ?? null,
-      industry: company.industry ?? null,
-      website: company.website ?? null,
-      createdAt: company.createdAt,
-      updatedAt: company.updatedAt,
+      id: p.id,
+      name: p.name,
+      domain: p.domain ?? null,
+      industry: p.industry ?? null,
+      website: p.website ?? null,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
     };
   }
 }

@@ -12,15 +12,11 @@ import { Contact } from '../../domain/entities/contact.entity.js';
 export class ContactPrismaRepository implements IContactRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    name: string;
-    email: string;
-    phone?: string | null;
-    role?: string | null;
-    companyId?: string | null;
-  }): Promise<Contact> {
+  async create(contact: Contact): Promise<Contact> {
+    const data = ContactMapper.toPersistence(contact);
     const created = await this.prisma.contact.create({
       data: {
+        id: data.id,
         name: data.name,
         email: data.email,
         phone: data.phone ?? null,
@@ -31,24 +27,16 @@ export class ContactPrismaRepository implements IContactRepository {
     return ContactMapper.toDomain(created);
   }
 
-  async update(
-    id: string,
-    data: Partial<{
-      name: string;
-      email: string;
-      phone: string | null;
-      role: string | null;
-      companyId: string | null;
-    }>,
-  ): Promise<Contact> {
+  async update(contact: Contact): Promise<Contact> {
+    const data = ContactMapper.toPersistence(contact);
     const updated = await this.prisma.contact.update({
-      where: { id },
+      where: { id: contact.id },
       data: {
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.email !== undefined && { email: data.email }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.role !== undefined && { role: data.role }),
-        ...(data.companyId !== undefined && { companyId: data.companyId }),
+        name: data.name,
+        email: data.email,
+        phone: data.phone ?? null,
+        role: data.role ?? null,
+        companyId: data.companyId ?? null,
       },
     });
     return ContactMapper.toDomain(updated);

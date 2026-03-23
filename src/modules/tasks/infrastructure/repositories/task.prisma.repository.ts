@@ -13,22 +13,16 @@ import { Task } from '../../domain/entities/task.entity.js';
 export class TaskPrismaRepository implements ITaskRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: {
-    title: string;
-    description?: string | null;
-    type?: TaskType;
-    dueAt?: Date | null;
-    leadId?: string | null;
-    contactId?: string | null;
-    companyId?: string | null;
-    dealId?: string | null;
-  }): Promise<Task> {
+  async create(task: Task): Promise<Task> {
+    const data = TaskMapper.toPersistence(task);
     const created = await this.prisma.task.create({
       data: {
+        id: data.id,
         title: data.title,
         description: data.description ?? null,
         type: data.type ?? TaskType.CALL,
         dueAt: data.dueAt ?? null,
+        completedAt: data.completedAt ?? null,
         leadId: data.leadId ?? null,
         contactId: data.contactId ?? null,
         companyId: data.companyId ?? null,
@@ -38,32 +32,20 @@ export class TaskPrismaRepository implements ITaskRepository {
     return TaskMapper.toDomain(created);
   }
 
-  async update(
-    id: string,
-    data: Partial<{
-      title: string;
-      description: string | null;
-      type: TaskType;
-      dueAt: Date | null;
-      completedAt: Date | null;
-      leadId: string | null;
-      contactId: string | null;
-      companyId: string | null;
-      dealId: string | null;
-    }>,
-  ): Promise<Task> {
+  async update(task: Task): Promise<Task> {
+    const data = TaskMapper.toPersistence(task);
     const updated = await this.prisma.task.update({
-      where: { id },
+      where: { id: task.id },
       data: {
-        ...(data.title !== undefined && { title: data.title }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.type !== undefined && { type: data.type }),
-        ...(data.dueAt !== undefined && { dueAt: data.dueAt }),
-        ...(data.completedAt !== undefined && { completedAt: data.completedAt }),
-        ...(data.leadId !== undefined && { leadId: data.leadId }),
-        ...(data.contactId !== undefined && { contactId: data.contactId }),
-        ...(data.companyId !== undefined && { companyId: data.companyId }),
-        ...(data.dealId !== undefined && { dealId: data.dealId }),
+        title: data.title,
+        description: data.description ?? null,
+        type: data.type,
+        dueAt: data.dueAt ?? null,
+        completedAt: data.completedAt ?? null,
+        leadId: data.leadId ?? null,
+        contactId: data.contactId ?? null,
+        companyId: data.companyId ?? null,
+        dealId: data.dealId ?? null,
       },
     });
     return TaskMapper.toDomain(updated);
@@ -107,13 +89,5 @@ export class TaskPrismaRepository implements ITaskRepository {
       page,
       limit,
     };
-  }
-
-  async complete(id: string): Promise<Task> {
-    const updated = await this.prisma.task.update({
-      where: { id },
-      data: { completedAt: new Date() },
-    });
-    return TaskMapper.toDomain(updated);
   }
 }

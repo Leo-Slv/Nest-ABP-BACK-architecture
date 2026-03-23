@@ -1,17 +1,1 @@
-import { DomainError } from '../../../../shared/errors/domain-error.js';
-
-export class Phone {
-  private readonly _value: string;
-
-  constructor(value: string) {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length < 10 || cleaned.length > 15) {
-      throw new DomainError('Telefone inválido');
-    }
-    this._value = value.trim();
-  }
-
-  get value(): string {
-    return this._value;
-  }
-}
+export { Phone } from '../../../../shared/domain/value-objects/phone.vo.js';

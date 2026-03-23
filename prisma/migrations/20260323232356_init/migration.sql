@@ -7,6 +7,9 @@ CREATE TYPE "DealStage" AS ENUM ('LEAD', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION',
 -- CreateEnum
 CREATE TYPE "TaskType" AS ENUM ('CALL', 'EMAIL', 'MEETING', 'FOLLOW_UP', 'OTHER');
 
+-- CreateEnum
+CREATE TYPE "OutboxEventStatus" AS ENUM ('PENDING', 'PROCESSED', 'FAILED');
+
 -- CreateTable
 CREATE TABLE "Lead" (
     "id" TEXT NOT NULL,
@@ -107,6 +110,19 @@ CREATE TABLE "Task" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OutboxEvent" (
+    "id" TEXT NOT NULL,
+    "eventName" TEXT NOT NULL,
+    "payload" JSONB NOT NULL,
+    "status" "OutboxEventStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "processedAt" TIMESTAMP(3),
+    "error" TEXT,
+
+    CONSTRAINT "OutboxEvent_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

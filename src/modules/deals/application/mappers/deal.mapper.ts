@@ -1,9 +1,23 @@
 import { Deal } from '../../domain/entities/deal.entity.js';
 import { DealStage } from '../../domain/enums/deal-stage.enum.js';
-import type { Deal as PrismaDeal } from '@prisma/client';
+
+export type DealRow = {
+  id: string;
+  title: string;
+  value: string | number;
+  stage: string;
+  pipelineId: string | null;
+  pipelineStageId: string | null;
+  contactId: string | null;
+  companyId: string | null;
+  expectedAt: Date | null;
+  closedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export class DealMapper {
-  static toDomain(prisma: PrismaDeal): Deal {
+  static toDomain(prisma: DealRow): Deal {
     return Deal.reconstitute({
       id: prisma.id,
       title: prisma.title,
@@ -24,7 +38,7 @@ export class DealMapper {
     id: string;
     title: string;
     value: number;
-    stage: PrismaDeal['stage'];
+    stage: DealStage;
     pipelineId: string | null;
     pipelineStageId: string | null;
     contactId: string | null;
@@ -37,7 +51,7 @@ export class DealMapper {
       id: p.id,
       title: p.title,
       value: p.value,
-      stage: p.stage as PrismaDeal['stage'],
+      stage: p.stage as DealStage,
       pipelineId: p.pipelineId,
       pipelineStageId: p.pipelineStageId,
       contactId: p.contactId,

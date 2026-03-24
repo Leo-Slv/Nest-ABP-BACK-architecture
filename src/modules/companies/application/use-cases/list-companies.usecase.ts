@@ -1,19 +1,26 @@
-import { Injectable, Inject } from '@nestjs/common';
-import type { ICompanyRepository, ListCompaniesResult } from '../../domain/repositories/company.repository.js';
+import { Inject, Injectable } from '@nestjs/common';
+import type { IUnitOfWork } from '../../../../shared/infrastructure/database/unit-of-work.js';
+import type {
+  ListCompaniesResult,
+} from '../../domain/repositories/company.repository.js';
 import type { ListCompaniesDto } from '../dtos/list-companies.dto.js';
+import { CompanyRepositoryFactory } from '../../infrastructure/repositories/company.repository.factory.js';
 
 @Injectable()
 export class ListCompaniesUseCase {
   constructor(
-    @Inject('ICompanyRepository')
-    private readonly repository: ICompanyRepository,
+    @Inject('IUnitOfWork') private readonly uow: IUnitOfWork,
+    private readonly companyRepositoryFactory: CompanyRepositoryFactory,
   ) {}
 
   async execute(dto: ListCompaniesDto): Promise<ListCompaniesResult> {
-    return this.repository.list({
-      page: dto.page,
-      limit: dto.limit,
-      search: dto.search,
+    return this.uow.execute(async (ctx) => {
+      const repository = this.companyRepositoryFactory.create(ctx);
+      return repository.list({
+        page: dto.page,
+        limit: dto.limit,
+        search: dto.search,
+      });
     });
   }
 }

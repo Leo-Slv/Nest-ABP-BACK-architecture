@@ -1,8 +1,17 @@
 import { Company } from '../../domain/entities/company.entity.js';
-import type { Company as PrismaCompany } from '@prisma/client';
+
+export type CompanyRow = {
+  id: string;
+  name: string;
+  domain: string | null;
+  industry: string | null;
+  website: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export class CompanyMapper {
-  static toDomain(prisma: PrismaCompany): Company {
+  static toDomain(prisma: CompanyRow): Company {
     return Company.reconstitute({
       id: prisma.id,
       name: prisma.name,

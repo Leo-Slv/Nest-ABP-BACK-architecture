@@ -1,10 +1,7 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../../shared/database/prisma.module.js';
-import { ContactsModule } from '../contacts/contacts.module.js';
-import { CompaniesModule } from '../companies/companies.module.js';
-import { PipelinesModule } from '../pipelines/pipelines.module.js';
+import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { DealController } from './presentation/controllers/deal.controller.js';
-import { DealPrismaRepository } from './infrastructure/repositories/deal.prisma.repository.js';
+import { DealRepositoryFactory } from './infrastructure/repositories/deal.repository.factory.js';
 import { DealCreatedEventHandler } from './application/handlers/deal-created.handler.js';
 import { DealUpdatedEventHandler } from './application/handlers/deal-updated.handler.js';
 import { DealStageMovedEventHandler } from './application/handlers/deal-stage-moved.handler.js';
@@ -17,13 +14,10 @@ import { ListDealsUseCase } from './application/use-cases/list-deals.usecase.js'
 import { MoveDealStageUseCase } from './application/use-cases/move-deal-stage.usecase.js';
 
 @Module({
-  imports: [PrismaModule, ContactsModule, CompaniesModule, PipelinesModule],
+  imports: [DatabaseModule],
   controllers: [DealController],
   providers: [
-    {
-      provide: 'IDealRepository',
-      useClass: DealPrismaRepository,
-    },
+    DealRepositoryFactory,
     DealCreatedEventHandler,
     DealUpdatedEventHandler,
     DealStageMovedEventHandler,
@@ -35,5 +29,6 @@ import { MoveDealStageUseCase } from './application/use-cases/move-deal-stage.us
     ListDealsUseCase,
     MoveDealStageUseCase,
   ],
+  exports: [],
 })
 export class DealsModule {}

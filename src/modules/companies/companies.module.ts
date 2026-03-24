@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../../shared/database/prisma.module.js';
+import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { CompanyController } from './presentation/controllers/company.controller.js';
-import { CompanyPrismaRepository } from './infrastructure/repositories/company.prisma.repository.js';
-import { CompanyDomainUniqueSpec } from './domain/specifications/company-domain-unique.specification.js';
+import { CompanyRepositoryFactory } from './infrastructure/repositories/company.repository.factory.js';
 import { CompanyCreatedEventHandler } from './application/handlers/company-created.handler.js';
 import { CompanyUpdatedEventHandler } from './application/handlers/company-updated.handler.js';
 import { CompanyDeletedEventHandler } from './application/handlers/company-deleted.handler.js';
@@ -14,14 +13,10 @@ import { FindCompanyUseCase } from './application/use-cases/find-company.usecase
 import { ListCompaniesUseCase } from './application/use-cases/list-companies.usecase.js';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [DatabaseModule],
   controllers: [CompanyController],
   providers: [
-    {
-      provide: 'ICompanyRepository',
-      useClass: CompanyPrismaRepository,
-    },
-    CompanyDomainUniqueSpec,
+    CompanyRepositoryFactory,
     CompanyCreatedEventHandler,
     CompanyUpdatedEventHandler,
     CompanyDeletedEventHandler,
@@ -32,6 +27,6 @@ import { ListCompaniesUseCase } from './application/use-cases/list-companies.use
     FindCompanyUseCase,
     ListCompaniesUseCase,
   ],
-  exports: [CreateCompanyUseCase, FindCompanyUseCase],
+  exports: [],
 })
 export class CompaniesModule {}

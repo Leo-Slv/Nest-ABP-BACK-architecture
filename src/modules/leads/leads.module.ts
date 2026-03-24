@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../../shared/database/prisma.module.js';
+import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { ContactsModule } from '../contacts/contacts.module.js';
 import { LeadController } from './presentation/controllers/lead.controller.js';
-import { LeadPrismaRepository } from './infrastructure/repositories/lead.prisma.repository.js';
+import { LeadRepositoryFactory } from './infrastructure/repositories/lead.repository.factory.js';
 import { LeadFactory } from './domain/factories/lead.factory.js';
-import { LeadEmailUniqueSpec } from './domain/specifications/lead-email-unique.specification.js';
 import { LeadCreatedEventHandler } from './application/handlers/lead-created.handler.js';
 import { LeadUpdatedEventHandler } from './application/handlers/lead-updated.handler.js';
 import { CreateLeadUseCase } from './application/use-cases/create-lead.usecase.js';
@@ -15,15 +14,11 @@ import { ListLeadsUseCase } from './application/use-cases/list-leads.usecase.js'
 import { ConvertLeadUseCase } from './application/use-cases/convert-lead.usecase.js';
 
 @Module({
-  imports: [PrismaModule, ContactsModule],
+  imports: [DatabaseModule, ContactsModule],
   controllers: [LeadController],
   providers: [
-    {
-      provide: 'ILeadRepository',
-      useClass: LeadPrismaRepository,
-    },
+    LeadRepositoryFactory,
     LeadFactory,
-    LeadEmailUniqueSpec,
     LeadCreatedEventHandler,
     LeadUpdatedEventHandler,
     CreateLeadUseCase,

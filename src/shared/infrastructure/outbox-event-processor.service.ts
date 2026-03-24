@@ -1,11 +1,12 @@
 import {
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { OutboxEventStatus } from '@prisma/client';
-import { PrismaService } from '../database/prisma.service.js';
+import type { Pool } from 'pg';
+import { DATABASE_POOL } from './database/database.tokens.js';
 import { DomainEventHandlerRegistry } from './domain-event-handler-registry.impl.js';
 import { deserializeDomainEvent } from './outbox-domain-event-factory.js';
 
@@ -21,7 +22,7 @@ export class OutboxEventProcessor implements OnModuleInit, OnModuleDestroy {
   private timer?: ReturnType<typeof setInterval>;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(DATABASE_POOL) private readonly pool: Pool,
     private readonly registry: DomainEventHandlerRegistry,
   ) {}
 
@@ -37,41 +38,42 @@ export class OutboxEventProcessor implements OnModuleInit, OnModuleDestroy {
 
   private async tick(): Promise<void> {
     try {
-      const rows = await this.prisma.outboxEvent.findMany({
-        where: { status: OutboxEventStatus.PENDING },
-        orderBy: { createdAt: 'asc' },
-        take: BATCH,
-      });
+      const { rows } = await this.pool.query<{
+        id: string;
+        eventName: string;
+        payload: unknown;
+      }>(
+        `SELECT "id", "eventName", "payload" FROM "OutboxEvent"
+         WHERE "status" = 'PENDING'::"OutboxEventStatus"
+         ORDER BY "createdAt" ASC
+         LIMIT $1`,
+        [BATCH],
+      );
+
       for (const row of rows) {
         const event = deserializeDomainEvent(row.eventName, row.payload);
         if (!event) {
-          await this.prisma.outboxEvent.update({
-            where: { id: row.id },
-            data: {
-              status: OutboxEventStatus.FAILED,
-              error: `Unknown eventName: ${row.eventName}`,
-            },
-          });
+          await this.pool.query(
+            `UPDATE "OutboxEvent" SET "status" = 'FAILED'::"OutboxEventStatus", "error" = $2
+             WHERE "id" = $1`,
+            [row.id, `Unknown eventName: ${row.eventName}`],
+          );
           continue;
         }
         try {
           await this.registry.dispatchToHandlers([event]);
-          await this.prisma.outboxEvent.update({
-            where: { id: row.id },
-            data: {
-              status: OutboxEventStatus.PROCESSED,
-              processedAt: new Date(),
-            },
-          });
+          await this.pool.query(
+            `UPDATE "OutboxEvent" SET "status" = 'PROCESSED'::"OutboxEventStatus", "processedAt" = NOW()
+             WHERE "id" = $1`,
+            [row.id],
+          );
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          await this.prisma.outboxEvent.update({
-            where: { id: row.id },
-            data: {
-              status: OutboxEventStatus.FAILED,
-              error: message.slice(0, 4000),
-            },
-          });
+          await this.pool.query(
+            `UPDATE "OutboxEvent" SET "status" = 'FAILED'::"OutboxEventStatus", "error" = $2
+             WHERE "id" = $1`,
+            [row.id, message.slice(0, 4000)],
+          );
           this.log.error(`Outbox ${row.id} failed: ${message}`);
         }
       }

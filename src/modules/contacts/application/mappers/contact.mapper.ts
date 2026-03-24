@@ -1,8 +1,18 @@
 import { Contact } from '../../domain/entities/contact.entity.js';
-import type { Contact as PrismaContact } from '@prisma/client';
+
+export type ContactRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string | null;
+  companyId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export class ContactMapper {
-  static toDomain(prisma: PrismaContact): Contact {
+  static toDomain(prisma: ContactRow): Contact {
     return Contact.reconstitute({
       id: prisma.id,
       name: prisma.name,
@@ -15,7 +25,7 @@ export class ContactMapper {
     });
   }
 
-  static toPersistence(contact: Contact): Omit<PrismaContact, 'createdAt' | 'updatedAt'> & { createdAt: Date; updatedAt: Date } {
+  static toPersistence(contact: Contact): ContactRow {
     const p = contact.toPersistence();
     return {
       id: p.id,

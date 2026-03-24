@@ -1,9 +1,23 @@
 import { Task } from '../../domain/entities/task.entity.js';
 import { TaskType } from '../../domain/enums/task-type.enum.js';
-import type { Task as PrismaTask } from '@prisma/client';
+
+export type TaskRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  dueAt: Date | null;
+  completedAt: Date | null;
+  leadId: string | null;
+  contactId: string | null;
+  companyId: string | null;
+  dealId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export class TaskMapper {
-  static toDomain(prisma: PrismaTask): Task {
+  static toDomain(prisma: TaskRow): Task {
     return Task.reconstitute({
       id: prisma.id,
       title: prisma.title,
@@ -24,7 +38,7 @@ export class TaskMapper {
     id: string;
     title: string;
     description: string | null;
-    type: PrismaTask['type'];
+    type: TaskType;
     dueAt: Date | null;
     completedAt: Date | null;
     leadId: string | null;
@@ -37,7 +51,7 @@ export class TaskMapper {
       id: p.id,
       title: p.title,
       description: p.description,
-      type: p.type as PrismaTask['type'],
+      type: p.type as TaskType,
       dueAt: p.dueAt,
       completedAt: p.completedAt,
       leadId: p.leadId,

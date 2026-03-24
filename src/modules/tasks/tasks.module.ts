@@ -1,11 +1,7 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../../shared/database/prisma.module.js';
-import { LeadsModule } from '../leads/leads.module.js';
-import { ContactsModule } from '../contacts/contacts.module.js';
-import { CompaniesModule } from '../companies/companies.module.js';
-import { DealsModule } from '../deals/deals.module.js';
+import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { TaskController } from './presentation/controllers/task.controller.js';
-import { TaskPrismaRepository } from './infrastructure/repositories/task.prisma.repository.js';
+import { TaskRepositoryFactory } from './infrastructure/repositories/task.repository.factory.js';
 import { TaskCreatedEventHandler } from './application/handlers/task-created.handler.js';
 import { TaskUpdatedEventHandler } from './application/handlers/task-updated.handler.js';
 import { TaskCompletedEventHandler } from './application/handlers/task-completed.handler.js';
@@ -19,19 +15,10 @@ import { ListTasksUseCase } from './application/use-cases/list-tasks.usecase.js'
 import { CompleteTaskUseCase } from './application/use-cases/complete-task.usecase.js';
 
 @Module({
-  imports: [
-    PrismaModule,
-    LeadsModule,
-    ContactsModule,
-    CompaniesModule,
-    DealsModule,
-  ],
+  imports: [DatabaseModule],
   controllers: [TaskController],
   providers: [
-    {
-      provide: 'ITaskRepository',
-      useClass: TaskPrismaRepository,
-    },
+    TaskRepositoryFactory,
     TaskCreatedEventHandler,
     TaskUpdatedEventHandler,
     TaskCompletedEventHandler,
@@ -44,5 +31,6 @@ import { CompleteTaskUseCase } from './application/use-cases/complete-task.useca
     ListTasksUseCase,
     CompleteTaskUseCase,
   ],
+  exports: [],
 })
 export class TasksModule {}

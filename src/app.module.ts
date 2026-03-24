@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from './shared/database/prisma.module.js';
+import { DatabaseModule } from './shared/infrastructure/database/database.module.js';
 import { DomainEventsModule } from './shared/domain-events.module.js';
 import { LeadsModule } from './modules/leads/leads.module.js';
 import { ContactsModule } from './modules/contacts/contacts.module.js';
@@ -10,7 +10,7 @@ import { TasksModule } from './modules/tasks/tasks.module.js';
 
 @Module({
   imports: [
-    PrismaModule,
+    DatabaseModule,
     DomainEventsModule,
     LeadsModule,
     ContactsModule,

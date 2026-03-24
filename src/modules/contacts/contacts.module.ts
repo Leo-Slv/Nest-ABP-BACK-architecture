@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../../shared/database/prisma.module.js';
+import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { ContactController } from './presentation/controllers/contact.controller.js';
-import { ContactPrismaRepository } from './infrastructure/repositories/contact.prisma.repository.js';
-import { ContactEmailUniqueSpec } from './domain/specifications/contact-email-unique.specification.js';
+import { ContactRepositoryFactory } from './infrastructure/repositories/contact.repository.factory.js';
 import { ContactCreatedEventHandler } from './application/handlers/contact-created.handler.js';
 import { ContactUpdatedEventHandler } from './application/handlers/contact-updated.handler.js';
 import { ContactDeletedEventHandler } from './application/handlers/contact-deleted.handler.js';
@@ -14,14 +13,10 @@ import { FindContactUseCase } from './application/use-cases/find-contact.usecase
 import { ListContactsUseCase } from './application/use-cases/list-contacts.usecase.js';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [DatabaseModule],
   controllers: [ContactController],
   providers: [
-    {
-      provide: 'IContactRepository',
-      useClass: ContactPrismaRepository,
-    },
-    ContactEmailUniqueSpec,
+    ContactRepositoryFactory,
     ContactCreatedEventHandler,
     ContactUpdatedEventHandler,
     ContactDeletedEventHandler,

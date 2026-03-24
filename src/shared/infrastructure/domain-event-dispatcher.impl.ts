@@ -1,21 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import type { Pool } from 'pg';
+import { DATABASE_POOL } from './database/database.tokens.js';
 import type {
   IDomainEventDispatcher,
   DomainEventHandler,
 } from '../domain/domain-event-dispatcher.js';
 import type { DomainEvent } from '../domain/domain-event.js';
-import { PrismaService } from '../database/prisma.service.js';
 import { DomainEventHandlerRegistry } from './domain-event-handler-registry.impl.js';
 import { serializeDomainEvent } from './outbox-domain-event-serializer.js';
 
 /**
  * Persists domain events to the outbox table; handlers run asynchronously via {@link OutboxEventProcessor}.
+ * Uses the shared pool (outside of UnitOfWork transactions), after commit.
  */
 @Injectable()
 export class DomainEventDispatcher implements IDomainEventDispatcher {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(DATABASE_POOL) private readonly pool: Pool,
     private readonly registry: DomainEventHandlerRegistry,
   ) {}
 
@@ -29,9 +31,11 @@ export class DomainEventDispatcher implements IDomainEventDispatcher {
   async dispatch(events: DomainEvent[]): Promise<void> {
     for (const event of events) {
       const { eventName, payload } = serializeDomainEvent(event);
-      await this.prisma.outboxEvent.create({
-        data: { eventName, payload: payload as Prisma.InputJsonValue },
-      });
+      await this.pool.query(
+        `INSERT INTO "OutboxEvent" ("id", "eventName", "payload", "status", "createdAt")
+         VALUES ($1, $2, $3::jsonb, 'PENDING'::"OutboxEventStatus", NOW())`,
+        [randomUUID(), eventName, JSON.stringify(payload)],
+      );
     }
   }
 }

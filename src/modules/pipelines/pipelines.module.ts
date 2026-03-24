@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../../shared/database/prisma.module.js';
+import { DatabaseModule } from '../../shared/infrastructure/database/database.module.js';
 import { PipelineController } from './presentation/controllers/pipeline.controller.js';
-import { PipelinePrismaRepository } from './infrastructure/repositories/pipeline.prisma.repository.js';
+import { PipelineRepositoryFactory } from './infrastructure/repositories/pipeline.repository.factory.js';
 import { PipelineCreatedEventHandler } from './application/handlers/pipeline-created.handler.js';
 import { PipelineUpdatedEventHandler } from './application/handlers/pipeline-updated.handler.js';
 import { PipelineFactory } from './domain/factories/pipeline.factory.js';
@@ -12,13 +12,10 @@ import { FindPipelineUseCase } from './application/use-cases/find-pipeline.useca
 import { ListPipelinesUseCase } from './application/use-cases/list-pipelines.usecase.js';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [DatabaseModule],
   controllers: [PipelineController],
   providers: [
-    {
-      provide: 'IPipelineRepository',
-      useClass: PipelinePrismaRepository,
-    },
+    PipelineRepositoryFactory,
     PipelineCreatedEventHandler,
     PipelineUpdatedEventHandler,
     PipelineFactory,
@@ -28,6 +25,6 @@ import { ListPipelinesUseCase } from './application/use-cases/list-pipelines.use
     FindPipelineUseCase,
     ListPipelinesUseCase,
   ],
-  exports: [FindPipelineUseCase, ListPipelinesUseCase],
+  exports: [],
 })
 export class PipelinesModule {}

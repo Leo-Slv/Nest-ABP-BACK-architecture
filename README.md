@@ -13,7 +13,8 @@ API de CRM construída em NestJS seguindo **Clean Architecture** com módulos in
 | **NestJS**  | Framework backend            |
 | **Prisma**  | ORM + `schema.prisma` (PostgreSQL; sync com `db push`) |
 | **nestjs-zod** | Validação e integração Swagger |
-| **Swagger** | Documentação da API          |
+| **Swagger** | Documentação OpenAPI (UI clássica em `/docs`) |
+| **Scalar** | UI moderna sobre o mesmo OpenAPI (`@scalar/nestjs-api-reference`, `/scalar`) |
 | **Zod**     | Schema e validação em runtime|
 
 ## Pré-requisitos
@@ -57,7 +58,7 @@ npm run db:up
 npm run db:push
 ```
 
-O schema fica em `prisma/schema.prisma`; a URL do banco para o CLI (`migrate`, `db push`, `studio`) está em **`prisma.config.ts`** (Prisma 7+). Em runtime, o `PrismaService` usa o adapter **`@prisma/adapter-pg`**. Não há pasta `migrations` — o banco é atualizado com `prisma db push` (adequado para dev/preview).
+O schema fica em `prisma/schema.prisma`; a URL do banco para o CLI (`db push`, `studio`) está em **`prisma.config.ts`** (Prisma 7+). Em runtime, a API usa **`pg`** (pool) + **Unit of Work** com SQL explícito (`ctx.client.query`). Não há pasta `migrations` — o banco é atualizado com `prisma db push` (adequado para dev/preview).
 
 ### 4. Iniciar a aplicação
 
@@ -76,7 +77,8 @@ npm run start:prod
 ### 5. Acessar a API
 
 - **API:** `http://localhost:3000/api/v1`
-- **Swagger (docs):** `http://localhost:3000/docs`
+- **Swagger UI:** `http://localhost:3000/docs`
+- **Scalar (OpenAPI interativo):** `http://localhost:3000/scalar`
 
 ## Scripts Disponíveis
 
@@ -99,14 +101,14 @@ Cada domínio segue a mesma organização:
 modules/<dominio>/
 ├── domain/          # Entidades, value objects, contratos (interfaces)
 ├── application/     # Use cases, DTOs, mappers
-├── infrastructure/  # Implementações (ex: repositórios Prisma)
+├── infrastructure/  # Implementações (repositórios SQL + Unit of Work)
 ├── presentation/    # Controllers, roteamento
 └── <dominio>.module.ts
 ```
 
 - **Domain:** regras de negócio puras, sem dependências externas
 - **Application:** orquestração, recebe interfaces de repositório
-- **Infrastructure:** implementações concretas (Prisma, etc.)
+- **Infrastructure:** implementações concretas (repositórios via `pg`, factories, etc.)
 - **Presentation:** HTTP, Swagger, validação de entrada
 
 ## Módulos
@@ -122,12 +124,72 @@ modules/<dominio>/
 
 ## Rotas da API
 
-Todas sob o prefixo `/api/v1`:
+**Prefixo global:** `http://localhost:3000/api/v1` (ajuste host/porta conforme `.env`).
 
-- `POST/GET/GET/:id/PUT/DELETE` para cada recurso
-- `POST /leads/:id/convert` — converte lead em contato
-- `PATCH /deals/:id/stage` — move deal de estágio
-- `PATCH /tasks/:id/complete` — marca tarefa como concluída
+### Leads — `/api/v1/leads`
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/leads` | Criar lead |
+| `GET` | `/leads` | Listar leads (paginação / filtros) |
+| `GET` | `/leads/:id` | Buscar lead por id |
+| `PUT` | `/leads/:id` | Atualizar lead |
+| `DELETE` | `/leads/:id` | Remover lead |
+| `POST` | `/leads/:id/convert` | Converter lead em contato |
+
+### Contatos — `/api/v1/contacts`
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/contacts` | Criar contato |
+| `GET` | `/contacts` | Listar contatos |
+| `GET` | `/contacts/:id` | Buscar contato por id |
+| `PUT` | `/contacts/:id` | Atualizar contato |
+| `DELETE` | `/contacts/:id` | Remover contato |
+
+### Empresas — `/api/v1/companies`
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/companies` | Criar empresa |
+| `GET` | `/companies` | Listar empresas |
+| `GET` | `/companies/:id` | Buscar empresa por id |
+| `PUT` | `/companies/:id` | Atualizar empresa |
+| `DELETE` | `/companies/:id` | Remover empresa |
+
+### Deals — `/api/v1/deals`
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/deals` | Criar deal |
+| `GET` | `/deals` | Listar deals |
+| `GET` | `/deals/:id` | Buscar deal por id |
+| `PUT` | `/deals/:id` | Atualizar deal |
+| `PATCH` | `/deals/:id/stage` | Alterar estágio do deal |
+| `DELETE` | `/deals/:id` | Remover deal |
+
+### Pipelines — `/api/v1/pipelines`
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/pipelines` | Criar pipeline (com estágios) |
+| `GET` | `/pipelines` | Listar pipelines |
+| `GET` | `/pipelines/:id` | Buscar pipeline por id |
+| `PUT` | `/pipelines/:id` | Atualizar pipeline |
+| `DELETE` | `/pipelines/:id` | Remover pipeline |
+
+### Tarefas — `/api/v1/tasks`
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/tasks` | Criar tarefa |
+| `GET` | `/tasks` | Listar tarefas |
+| `GET` | `/tasks/:id` | Buscar tarefa por id |
+| `PUT` | `/tasks/:id` | Atualizar tarefa |
+| `PATCH` | `/tasks/:id/complete` | Marcar tarefa como concluída |
+| `DELETE` | `/tasks/:id` | Remover tarefa |
+
+> Contratos e parâmetros de query/body: **Swagger** em `/docs` ou **Scalar** em `/scalar`.
 
 ## Sobre este Preview
 

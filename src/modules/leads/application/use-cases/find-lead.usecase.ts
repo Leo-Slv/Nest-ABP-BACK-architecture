@@ -1,20 +1,24 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import type { IUnitOfWork } from '../../../../shared/infrastructure/database/unit-of-work.js';
 import { NotFoundError } from '../../../../shared/errors/not-found.error.js';
 import { Lead } from '../../domain/entities/lead.entity.js';
-import type { ILeadRepository } from '../../domain/repositories/lead.repository.js';
+import { LeadRepositoryFactory } from '../../infrastructure/repositories/lead.repository.factory.js';
 
 @Injectable()
 export class FindLeadUseCase {
   constructor(
-    @Inject('ILeadRepository')
-    private readonly repository: ILeadRepository,
+    @Inject('IUnitOfWork') private readonly uow: IUnitOfWork,
+    private readonly leadRepositoryFactory: LeadRepositoryFactory,
   ) {}
 
   async execute(id: string): Promise<Lead> {
-    const lead = await this.repository.findById(id);
-    if (!lead) {
-      throw new NotFoundError(`Lead ${id} não encontrado`);
-    }
-    return lead;
+    return this.uow.execute(async (ctx) => {
+      const repository = this.leadRepositoryFactory.create(ctx);
+      const lead = await repository.findById(id);
+      if (!lead) {
+        throw new NotFoundError(`Lead ${id} não encontrado`);
+      }
+      return lead;
+    });
   }
 }

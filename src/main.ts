@@ -1,13 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter.js';
 import { env } from './config/env.js';
 
-async function bootstrap() {
+/** Deve ser aplicado antes de `SwaggerModule.createDocument` para paths e Try it usarem o mesmo prefixo. */
+const API_PREFIX = 'api/v1';
 
+async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.setGlobalPrefix(API_PREFIX);
+  app.enableCors();
+  app.useGlobalPipes(new ZodValidationPipe());
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   const config = new DocumentBuilder()
     .setTitle('CRM API')
@@ -16,23 +24,22 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addBearerAuth()
+    .addServer(`http://localhost:${env.PORT}`, 'Local (rotas já incluem /api/v1)')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+
   SwaggerModule.setup('docs', app, document);
 
-  app.useGlobalPipes(new ZodValidationPipe());
-  app.useGlobalFilters(new HttpExceptionFilter());
-  app.setGlobalPrefix('api/v1');
-  app.enableCors();
-
-  app.use((req, res, next) => {
-    res.status(404).json({
-      statusCode: 404,
-      message: `Rota ${req.method} ${req.url} não encontrada`,
-      error: 'Not Found',
-    });
-  });
+  app.use(
+    '/scalar',
+    apiReference({
+      content: document,
+      pageTitle: 'CRM API',
+      theme: 'purple',
+      baseServerURL: `http://localhost:${env.PORT}`,
+    }),
+  );
 
   await app.listen(env.PORT);
 }

@@ -1,31 +1,21 @@
 import { Contact } from '../../domain/entities/contact.entity.js';
-
-export type ContactRow = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  role: string | null;
-  companyId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import type { Contact as PrismaContact } from '@prisma/client';
 
 export class ContactMapper {
-  static toDomain(prisma: ContactRow): Contact {
+  static toDomain(row: PrismaContact): Contact {
     return Contact.reconstitute({
-      id: prisma.id,
-      name: prisma.name,
-      email: prisma.email,
-      phone: prisma.phone ?? null,
-      role: prisma.role ?? null,
-      companyId: prisma.companyId ?? null,
-      createdAt: prisma.createdAt,
-      updatedAt: prisma.updatedAt,
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone ?? null,
+      role: row.role ?? null,
+      companyId: row.companyId ?? null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
-  static toPersistence(contact: Contact): ContactRow {
+  static toPersistence(contact: Contact): PrismaContact {
     const p = contact.toPersistence();
     return {
       id: p.id,

@@ -1,36 +1,22 @@
 import { Deal } from '../../domain/entities/deal.entity.js';
 import { DealStage } from '../../domain/enums/deal-stage.enum.js';
-
-export type DealRow = {
-  id: string;
-  title: string;
-  value: string | number;
-  stage: string;
-  pipelineId: string | null;
-  pipelineStageId: string | null;
-  contactId: string | null;
-  companyId: string | null;
-  expectedAt: Date | null;
-  closedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import type { Deal as PrismaDeal } from '@prisma/client';
 
 export class DealMapper {
-  static toDomain(prisma: DealRow): Deal {
+  static toDomain(row: PrismaDeal): Deal {
     return Deal.reconstitute({
-      id: prisma.id,
-      title: prisma.title,
-      value: Number(prisma.value),
-      stage: prisma.stage as DealStage,
-      pipelineId: prisma.pipelineId,
-      pipelineStageId: prisma.pipelineStageId,
-      contactId: prisma.contactId,
-      companyId: prisma.companyId,
-      expectedAt: prisma.expectedAt,
-      closedAt: prisma.closedAt,
-      createdAt: prisma.createdAt,
-      updatedAt: prisma.updatedAt,
+      id: row.id,
+      title: row.title,
+      value: Number(row.value),
+      stage: row.stage as unknown as DealStage,
+      pipelineId: row.pipelineId,
+      pipelineStageId: row.pipelineStageId,
+      contactId: row.contactId,
+      companyId: row.companyId,
+      expectedAt: row.expectedAt,
+      closedAt: row.closedAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 

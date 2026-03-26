@@ -2,36 +2,20 @@ import {
   Pipeline,
   PipelineStage,
 } from '../../domain/entities/pipeline.entity.js';
-
-export type PipelineStageRow = {
-  id: string;
-  name: string;
-  order: number;
-  pipelineId: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type PipelineRow = {
-  id: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  stages?: PipelineStageRow[];
-};
+import type { Pipeline as PrismaPipeline, PipelineStage as PrismaPipelineStage } from '@prisma/client';
 
 export class PipelineMapper {
-  static stageToDomain(prisma: PipelineStageRow): PipelineStage {
+  static stageToDomain(row: PrismaPipelineStage): PipelineStage {
     return PipelineStage.create({
-      id: prisma.id,
-      name: prisma.name,
-      order: prisma.order,
-      pipelineId: prisma.pipelineId,
+      id: row.id,
+      name: row.name,
+      order: row.order,
+      pipelineId: row.pipelineId,
     });
   }
 
   static toDomain(
-    prisma: PipelineRow,
+    prisma: PrismaPipeline & { stages?: PrismaPipelineStage[] },
   ): Pipeline {
     return Pipeline.reconstitute({
       id: prisma.id,

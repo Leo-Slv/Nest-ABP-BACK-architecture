@@ -1,9 +1,9 @@
-import type { PoolClient } from 'pg';
+import type { Prisma } from '@prisma/client';
 
 /**
- * Holds the PostgreSQL client for the current transaction (Unit of Work).
+ * Holds the Prisma transaction client for the current Unit of Work.
  * @see docs/unitOfWorkImplementation.md
  */
 export interface TransactionContext {
-  client: PoolClient;
+  prisma: Prisma.TransactionClient;
 }

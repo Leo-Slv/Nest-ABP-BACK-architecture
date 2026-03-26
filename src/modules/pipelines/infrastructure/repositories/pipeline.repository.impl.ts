@@ -15,20 +15,22 @@ export class PipelineSqlRepository implements IPipelineRepository {
     const p = pipeline.toPersistence();
     const stages = pipeline.getPendingStagesForCreate();
 
-    await this.ctx.client.query(
-      `INSERT INTO "Pipeline" ("id", "name", "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4)`,
-      [p.id, p.name, p.createdAt, p.updatedAt],
-    );
-
-    for (const s of stages) {
-      const sid = randomUUID();
-      await this.ctx.client.query(
-        `INSERT INTO "PipelineStage" ("id", "name", "order", "pipelineId", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-        [sid, s.name, s.order, p.id],
-      );
-    }
+    await this.ctx.prisma.pipeline.create({
+      data: {
+        id: p.id,
+        name: p.name,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        stages: {
+          create: stages.map((s) => ({
+            id: randomUUID(),
+            name: s.name,
+            order: s.order,
+          })),
+        },
+      },
+      include: { stages: true },
+    });
 
     const created = await this.findById(pipeline.id);
     if (!created) {
@@ -41,10 +43,13 @@ export class PipelineSqlRepository implements IPipelineRepository {
     const existing = await this.findById(pipeline.id);
     if (!existing) throw new PipelineNotFoundError(pipeline.id);
 
-    await this.ctx.client.query(
-      `UPDATE "Pipeline" SET "name" = $1, "updatedAt" = NOW() WHERE "id" = $2`,
-      [pipeline.name, pipeline.id],
-    );
+    await this.ctx.prisma.pipeline.update({
+      where: { id: pipeline.id },
+      data: {
+        name: pipeline.name,
+        updatedAt: new Date(),
+      },
+    });
 
     const updated = await this.findById(pipeline.id);
     if (!updated) throw new PipelineNotFoundError(pipeline.id);
@@ -52,36 +57,19 @@ export class PipelineSqlRepository implements IPipelineRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await this.ctx.client.query(
-      `DELETE FROM "PipelineStage" WHERE "pipelineId" = $1`,
-      [id],
-    );
-    const r = await this.ctx.client.query(
-      `DELETE FROM "Pipeline" WHERE "id" = $1`,
-      [id],
-    );
-    if (r.rowCount === 0) {
+    try {
+      await this.ctx.prisma.pipeline.delete({ where: { id } });
+    } catch {
       throw new PipelineNotFoundError(id);
     }
   }
 
   async findById(id: string): Promise<Pipeline | null> {
-    const pr = await this.ctx.client.query(
-      `SELECT * FROM "Pipeline" WHERE "id" = $1`,
-      [id],
-    );
-    const row = pr.rows[0];
-    if (!row) return null;
-
-    const sr = await this.ctx.client.query(
-      `SELECT * FROM "PipelineStage" WHERE "pipelineId" = $1 ORDER BY "order" ASC`,
-      [id],
-    );
-
-    return PipelineMapper.toDomain({
-      ...row,
-      stages: sr.rows,
+    const row = await this.ctx.prisma.pipeline.findUnique({
+      where: { id },
+      include: { stages: { orderBy: { order: 'asc' } } },
     });
+    return row ? PipelineMapper.toDomain(row) : null;
   }
 
   async list(params: {
@@ -91,26 +79,16 @@ export class PipelineSqlRepository implements IPipelineRepository {
     const { page, limit } = params;
     const skip = (page - 1) * limit;
 
-    const countR = await this.ctx.client.query(
-      `SELECT COUNT(*)::int AS c FROM "Pipeline"`,
-    );
-    const total = countR.rows[0].c as number;
-
-    const dataR = await this.ctx.client.query(
-      `SELECT * FROM "Pipeline" ORDER BY "createdAt" DESC LIMIT $1 OFFSET $2`,
-      [limit, skip],
-    );
-
-    const pipelines: Pipeline[] = [];
-    for (const row of dataR.rows) {
-      const sr = await this.ctx.client.query(
-        `SELECT * FROM "PipelineStage" WHERE "pipelineId" = $1 ORDER BY "order" ASC`,
-        [row.id],
-      );
-      pipelines.push(
-        PipelineMapper.toDomain({ ...row, stages: sr.rows }),
-      );
-    }
+    const [total, rows] = await Promise.all([
+      this.ctx.prisma.pipeline.count(),
+      this.ctx.prisma.pipeline.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: { stages: { orderBy: { order: 'asc' } } },
+      }),
+    ]);
+    const pipelines = rows.map((row) => PipelineMapper.toDomain(row));
 
     return {
       data: pipelines,

@@ -1,36 +1,22 @@
 import { Task } from '../../domain/entities/task.entity.js';
 import { TaskType } from '../../domain/enums/task-type.enum.js';
-
-export type TaskRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  type: string;
-  dueAt: Date | null;
-  completedAt: Date | null;
-  leadId: string | null;
-  contactId: string | null;
-  companyId: string | null;
-  dealId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import type { Task as PrismaTask } from '@prisma/client';
 
 export class TaskMapper {
-  static toDomain(prisma: TaskRow): Task {
+  static toDomain(row: PrismaTask): Task {
     return Task.reconstitute({
-      id: prisma.id,
-      title: prisma.title,
-      description: prisma.description,
-      type: prisma.type as TaskType,
-      dueAt: prisma.dueAt,
-      completedAt: prisma.completedAt,
-      leadId: prisma.leadId,
-      contactId: prisma.contactId,
-      companyId: prisma.companyId,
-      dealId: prisma.dealId,
-      createdAt: prisma.createdAt,
-      updatedAt: prisma.updatedAt,
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      type: row.type as unknown as TaskType,
+      dueAt: row.dueAt,
+      completedAt: row.completedAt,
+      leadId: row.leadId,
+      contactId: row.contactId,
+      companyId: row.companyId,
+      dealId: row.dealId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 

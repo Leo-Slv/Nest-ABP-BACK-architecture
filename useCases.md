@@ -20,7 +20,6 @@ GER -->|herda| ADM
 %% ═══════════════════════════════════════════
 subgraph SGL["Sistema de Gestão de Leads"]
 
-  %% Colunas verticais (subgraphs organizados verticalmente)
   direction TB
 
   %% Linha 1 - Autenticação
@@ -65,8 +64,17 @@ subgraph SGL["Sistema de Gestão de Leads"]
     UC_STAGE_NEG["Atualizar Estágio"]
     UC_STATUS_NEG["Alterar Status"]
     UC_CLOSE_NEG["Encerrar Negociação"]
+
+    %% 🔧 ADIÇÕES RF03
+    UC_SET_IMPORTANCIA["Definir Importância (Frio/Morno/Quente)"]
+    UC_SET_OPEN["Definir como Aberta"]
+    UC_VALIDATE_UNIQUE_NEG[/"《include》Validar 1 Negociação Ativa por Lead"/]
+
+    UC_CREATE_NEG -.-> UC_VALIDATE_UNIQUE_NEG
+
     UC_MOTIVO_FIN[/"《include》Motivo de Finalização"/]
     UC_HIST_NEG[/"《include》Histórico de Mudanças"/]
+
     UC_CLOSE_NEG -.-> UC_MOTIVO_FIN
     UC_STAGE_NEG -.-> UC_HIST_NEG
     UC_STATUS_NEG -.-> UC_HIST_NEG
@@ -79,7 +87,25 @@ subgraph SGL["Sistema de Gestão de Leads"]
     UC_DASH_OP["Consultar Dashboard Operacional"]
     UC_DASH_TEAM["Consultar Dashboard da Equipe"]
     UC_DASH_GLOBAL["Consultar Dashboard Global"]
+
+    %% 🔧 ADIÇÕES RF04/RF05
+    UC_METRIC_CONV[/"《include》Taxa de Conversão"/]
+    UC_METRIC_TIME[/"《include》Tempo Médio de Atendimento"/]
+    UC_METRIC_IMPORT[/"《include》Leads por Importância"/]
+    UC_METRIC_STORE[/"《include》Leads por Loja"/]
+
+    UC_DASH_OP -.-> UC_METRIC_IMPORT
+    UC_DASH_OP -.-> UC_METRIC_STORE
+    UC_DASH_TEAM -.-> UC_METRIC_CONV
+    UC_DASH_GLOBAL -.-> UC_METRIC_CONV
+    UC_DASH_GLOBAL -.-> UC_METRIC_TIME
+
     UC_FILTER[/"《include》Aplicar Filtro Temporal"/]
+
+    %% 🔧 ADIÇÕES RF06
+    UC_VALIDATE_FILTER[/"《include》Validar Período (Regra 1 Ano)"/]
+    UC_FILTER -.-> UC_VALIDATE_FILTER
+
     UC_DASH_OP -.-> UC_FILTER
     UC_DASH_TEAM -.-> UC_FILTER
     UC_DASH_GLOBAL -.-> UC_FILTER
@@ -100,13 +126,15 @@ subgraph SGL["Sistema de Gestão de Leads"]
     UC_AUDIT[/"《include》Registrar Evento de Auditoria"/]
   end
 
+  %% 🔧 ADIÇÃO GLOBAL (RBAC explícito leve)
+  UC_VALIDATE_RBAC[/"《include》Validar Permissão (RBAC)"/]
+
 end
 
 %% ═══════════════════════════════════════════
 %%  ASSOCIAÇÕES — ATORES
 %% ═══════════════════════════════════════════
 
-%% Atendente
 ATD --> UC_LOGIN
 ATD --> UC_UPD_CRED
 ATD --> UC_CREATE_LEAD
@@ -118,22 +146,20 @@ ATD --> UC_CREATE_NEG
 ATD --> UC_STAGE_NEG
 ATD --> UC_STATUS_NEG
 ATD --> UC_CLOSE_NEG
+ATD --> UC_SET_IMPORTANCIA
 ATD --> UC_DASH_OP
 
-%% Gerente
 GER --> UC_LIST_LEAD_TEAM
 GER --> UC_EDIT_LEAD_TEAM
 GER --> UC_REATRIBUIR_LEAD
 GER --> UC_DASH_TEAM
 GER --> UC_VINCULAR_ATD
 
-%% Gerente Geral
 GG --> UC_DASH_GLOBAL
 GG --> UC_LIST_LEAD_TEAM
 GG --> UC_LOGIN
 GG --> UC_UPD_CRED
 
-%% Administrador
 ADM --> UC_USER_ADMIN
 ADM --> UC_TEAM_ADMIN
 ADM --> UC_LEAD_ADMIN
@@ -143,13 +169,13 @@ ADM --> UC_DASH_GLOBAL
 
 %% Sistema
 SIS --> UC_AUDIT
+
+%% Auditoria
 UC_AUDIT -.-> UC_CREATE_LEAD
 UC_AUDIT -.-> UC_CREATE_NEG
 UC_AUDIT -.-> UC_CREATE_CLI
 UC_AUDIT -.-> UC_USER_ADMIN
 UC_AUDIT -.-> UC_TEAM_ADMIN
-
-%% 🔧 Correções RF07 (adições)
 UC_AUDIT -.-> UC_LOGIN
 UC_AUDIT -.-> UC_EDIT_LEAD_OWN
 UC_AUDIT -.-> UC_EDIT_LEAD_TEAM
@@ -159,3 +185,12 @@ UC_AUDIT -.-> UC_STATUS_NEG
 UC_AUDIT -.-> UC_CLOSE_NEG
 UC_AUDIT -.-> UC_UPD_CLI
 UC_AUDIT -.-> UC_CLI_ADMIN
+
+%% 🔧 RBAC aplicado em operações críticas
+UC_CREATE_LEAD -.-> UC_VALIDATE_RBAC
+UC_EDIT_LEAD_OWN -.-> UC_VALIDATE_RBAC
+UC_EDIT_LEAD_TEAM -.-> UC_VALIDATE_RBAC
+UC_CREATE_NEG -.-> UC_VALIDATE_RBAC
+UC_USER_ADMIN -.-> UC_VALIDATE_RBAC
+UC_TEAM_ADMIN -.-> UC_VALIDATE_RBAC
+UC_CLI_ADMIN -.-> UC_VALIDATE_RBAC

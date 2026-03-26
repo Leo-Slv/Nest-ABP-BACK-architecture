@@ -95,7 +95,7 @@ subgraph SGL["Sistema de Gestão de Leads"]
     UC_METRIC_STORE[/"《include》Leads por Loja"/]
 
     UC_DASH_OP -.-> UC_METRIC_IMPORT
-    UC_DASH_OP -.-> UC_METRIC_STORE
+   UC_DASH_GLOBAL -.-> UC_METRIC_STORE
     UC_DASH_TEAM -.-> UC_METRIC_CONV
     UC_DASH_GLOBAL -.-> UC_METRIC_CONV
     UC_DASH_GLOBAL -.-> UC_METRIC_TIME

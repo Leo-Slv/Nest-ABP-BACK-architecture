@@ -3,196 +3,246 @@
 flowchart LR
 
 %% ═══════════════════════════════════════════
-%%  ATORES
+%% ACTORS
 %% ═══════════════════════════════════════════
-ATD(["👤 Atendente"])
-GER(["👤 Gerente"])
-GG(["👤 Gerente Geral"])
-ADM(["👤 Administrador"])
-SIS(["⚙️ Sistema"])
+ATT(["👤 Attendant"])
+MAN(["👤 Manager"])
+GM(["👤 General Manager"])
+ADM(["👤 Administrator"])
+SYS(["⚙️ System"])
 
-%% Generalização
-ATD -->|herda| GER
-GER -->|herda| ADM
+%% Actor generalization
+MAN -->|inherits| ATT
+GM -->|inherits| MAN
+ADM -->|inherits| GM
 
 %% ═══════════════════════════════════════════
-%%  SISTEMA AGRUPADO
+%% SYSTEM
 %% ═══════════════════════════════════════════
-subgraph SGL["Sistema de Gestão de Leads"]
+subgraph SGL["Lead Management System"]
 
   direction TB
 
-  %% Linha 1 - Autenticação
-  subgraph PKG_AUTH["Autenticação e Perfil"]
+  %% ────────────────────────────────────────
+  %% Authentication & Profile
+  %% ────────────────────────────────────────
+  subgraph PKG_AUTH["Authentication & Profile"]
     direction TB
-    UC_LOGIN["Autenticar-se no Sistema"]
-    UC_UPD_CRED["Atualizar Credenciais"]
-    UC_JWT[/"《include》Validar Token JWT"/]
-    UC_LOGIN -.->|include| UC_JWT
+    UC_LOGIN["Authenticate User"]
+    UC_UPDATE_CREDENTIALS["Update Own Credentials"]
+    UC_VALIDATE_JWT[/"«include» Validate JWT Token"/]
+
+    UC_LOGIN -.->|include| UC_VALIDATE_JWT
   end
 
-  %% Linha 2 - Leads
-  subgraph PKG_LEAD["Gestão de Leads"]
+  %% ────────────────────────────────────────
+  %% Users, Teams and Stores
+  %% ────────────────────────────────────────
+  subgraph PKG_ORG["Users, Teams & Stores"]
     direction TB
-    UC_CREATE_LEAD["Registrar Lead"]
-    UC_CANAL_ORIGEM[/"《include》Registrar Canal de Origem"/]
-    UC_VINCULAR_LEAD[/"《include》Vincular Lead a Loja/Atendente"/]
-    UC_CREATE_LEAD -.-> UC_CANAL_ORIGEM
-    UC_CREATE_LEAD -.-> UC_VINCULAR_LEAD
-    UC_LIST_LEAD_OWN["Listar Leads Próprios"]
-    UC_EDIT_LEAD_OWN["Editar Lead Próprio"]
-    UC_LIST_LEAD_TEAM["Listar Leads da Equipe"]
-    UC_EDIT_LEAD_TEAM["Editar Lead da Equipe"]
-    UC_REATRIBUIR_LEAD["Reatribuir Lead"]
-    UC_LEAD_ADMIN["Gerenciar Leads (CRUD Completo)"]
+    UC_LINK_ATTENDANT["Link Attendant to Team"]
+    UC_USER_ADMIN["Manage Users (Full CRUD)"]
+    UC_TEAM_ADMIN["Manage Teams (Full CRUD)"]
+    UC_STORE_ADMIN["Manage Stores (Full CRUD)"]
   end
 
-  %% Linha 3 - Clientes
-  subgraph PKG_CLI["Gestão de Clientes"]
+  %% ────────────────────────────────────────
+  %% Customers
+  %% ────────────────────────────────────────
+  subgraph PKG_CUSTOMER["Customer Management"]
     direction TB
-    UC_CREATE_CLI["Registrar Cliente"]
-    UC_ASSOC_CLI_LEAD[/"《include》Associar Cliente a Lead"/]
-    UC_CREATE_CLI -.-> UC_ASSOC_CLI_LEAD
-    UC_UPD_CLI["Atualizar Cliente"]
-    UC_CLI_ADMIN["Gerenciar Clientes (CRUD Completo)"]
+    UC_CREATE_CUSTOMER["Create Customer"]
+    UC_UPDATE_CUSTOMER["Update Customer"]
+    UC_CUSTOMER_ADMIN["Manage Customers (Full CRUD)"]
+    UC_LINK_CUSTOMER_LEAD[/"«include» Link Customer to Lead"/]
+
+    UC_CREATE_CUSTOMER -.-> UC_LINK_CUSTOMER_LEAD
   end
 
-  %% Linha 4 - Negociações
-  subgraph PKG_NEG["Gestão de Negociações"]
+  %% ────────────────────────────────────────
+  %% Leads
+  %% ────────────────────────────────────────
+  subgraph PKG_LEAD["Lead Management"]
     direction TB
-    UC_CREATE_NEG["Criar Negociação"]
-    UC_STAGE_NEG["Atualizar Estágio"]
-    UC_STATUS_NEG["Alterar Status"]
-    UC_CLOSE_NEG["Encerrar Negociação"]
+    UC_CREATE_LEAD["Register Lead"]
+    UC_REGISTER_SOURCE[/"«include» Register Lead Source"/]
+    UC_ASSIGN_LEAD[/"«include» Assign Lead to Store/Attendant"/]
+    UC_LIST_OWN_LEADS["List Own Leads"]
+    UC_EDIT_OWN_LEAD["Edit Own Lead"]
+    UC_LIST_TEAM_LEADS["List Team Leads"]
+    UC_EDIT_TEAM_LEAD["Edit Team Lead"]
+    UC_REASSIGN_LEAD["Reassign Lead"]
+    UC_LEAD_ADMIN["Manage Leads (Full CRUD)"]
 
-    %% 🔧 ADIÇÕES RF03
-    UC_SET_IMPORTANCIA["Definir Importância (Frio/Morno/Quente)"]
-    UC_SET_OPEN["Definir como Aberta"]
-    UC_VALIDATE_UNIQUE_NEG[/"《include》Validar 1 Negociação Ativa por Lead"/]
-
-    UC_CREATE_NEG -.-> UC_VALIDATE_UNIQUE_NEG
-
-    UC_MOTIVO_FIN[/"《include》Motivo de Finalização"/]
-    UC_HIST_NEG[/"《include》Histórico de Mudanças"/]
-
-    UC_CLOSE_NEG -.-> UC_MOTIVO_FIN
-    UC_STAGE_NEG -.-> UC_HIST_NEG
-    UC_STATUS_NEG -.-> UC_HIST_NEG
-    UC_CLOSE_NEG -.-> UC_HIST_NEG
+    UC_CREATE_LEAD -.-> UC_REGISTER_SOURCE
+    UC_CREATE_LEAD -.-> UC_ASSIGN_LEAD
   end
 
-  %% Linha 5 - Dashboards
-  subgraph PKG_DASH["Dashboards e Análises"]
+  %% ────────────────────────────────────────
+  %% Deals
+  %% ────────────────────────────────────────
+  subgraph PKG_DEAL["Deal Management"]
     direction TB
-    UC_DASH_OP["Consultar Dashboard Operacional"]
-    UC_DASH_TEAM["Consultar Dashboard da Equipe"]
-    UC_DASH_GLOBAL["Consultar Dashboard Global"]
+    UC_CREATE_DEAL["Create Deal"]
+    UC_UPDATE_DEAL_STAGE["Update Deal Stage"]
+    UC_UPDATE_DEAL_STATUS["Update Deal Status"]
+    UC_CLOSE_DEAL["Close Deal"]
 
-    %% 🔧 ADIÇÕES RF04/RF05
-    UC_METRIC_CONV[/"《include》Taxa de Conversão"/]
-    UC_METRIC_TIME[/"《include》Tempo Médio de Atendimento"/]
-    UC_METRIC_IMPORT[/"《include》Leads por Importância"/]
-    UC_METRIC_STORE[/"《include》Leads por Loja"/]
+    UC_SET_DEAL_IMPORTANCE["Set Deal Importance"]
+    UC_SET_DEAL_OPEN["Set Deal as Open"]
+    UC_VALIDATE_SINGLE_ACTIVE_DEAL[/"«include» Validate Single Active Deal per Lead"/]
+    UC_SET_CLOSE_REASON[/"«include» Set Close Reason"/]
+    UC_DEAL_HISTORY[/"«include» Record Deal History"/]
 
-    UC_DASH_OP -.-> UC_METRIC_IMPORT
-    UC_DASH_GLOBAL -.-> UC_METRIC_STORE
-    UC_DASH_OP -.-> UC_METRIC_STORE
-    UC_DASH_TEAM -.-> UC_METRIC_STORE
-    UC_DASH_TEAM -.-> UC_METRIC_CONV
-    UC_DASH_GLOBAL -.-> UC_METRIC_CONV
-    UC_DASH_GLOBAL -.-> UC_METRIC_TIME
-
-    UC_FILTER[/"《include》Aplicar Filtro Temporal"/]
-
-    %% 🔧 ADIÇÕES RF06
-    UC_VALIDATE_FILTER[/"《include》Validar Período (Regra 1 Ano)"/]
-    UC_FILTER -.-> UC_VALIDATE_FILTER
-
-    UC_DASH_OP -.-> UC_FILTER
-    UC_DASH_TEAM -.-> UC_FILTER
-    UC_DASH_GLOBAL -.-> UC_FILTER
+    UC_CREATE_DEAL -.-> UC_VALIDATE_SINGLE_ACTIVE_DEAL
+    UC_CREATE_DEAL -.-> UC_SET_DEAL_OPEN
+    UC_CLOSE_DEAL -.-> UC_SET_CLOSE_REASON
+    UC_UPDATE_DEAL_STAGE -.-> UC_DEAL_HISTORY
+    UC_UPDATE_DEAL_STATUS -.-> UC_DEAL_HISTORY
+    UC_CLOSE_DEAL -.-> UC_DEAL_HISTORY
   end
 
-  %% Linha 6 - Equipes e Usuários
-  subgraph PKG_TEAM["Gestão de Equipes e Usuários"]
+  %% ────────────────────────────────────────
+  %% Dashboards & Analytics
+  %% ────────────────────────────────────────
+  subgraph PKG_DASH["Dashboards & Analytics"]
     direction TB
-    UC_VINCULAR_ATD["Vincular Atendente"]
-    UC_USER_ADMIN["Gerenciar Usuários (CRUD Completo)"]
-    UC_TEAM_ADMIN["Gerenciar Equipes (CRUD Completo)"]
+    UC_OPERATIONAL_DASH["View Operational Dashboard"]
+    UC_TEAM_DASH["View Team Dashboard"]
+    UC_GLOBAL_DASH["View Global Dashboard"]
+
+    UC_CONVERSION_RATE[/"«include» Conversion Rate"/]
+    UC_AVG_RESPONSE_TIME[/"«include» Average Time to First Response"/]
+    UC_LEADS_BY_IMPORTANCE[/"«include» Leads by Importance"/]
+    UC_LEADS_BY_STORE[/"«include» Leads by Store"/]
+    UC_LEADS_BY_SOURCE[/"«include» Leads by Source"/]
+    UC_LEADS_BY_STATUS[/"«include» Leads by Status"/]
+    UC_LEADS_BY_ATTENDANT[/"«include» Leads by Attendant"/]
+    UC_LEADS_BY_TEAM[/"«include» Leads by Team"/]
+    UC_CLOSE_REASONS[/"«include» Close Reasons"/]
+    UC_FILTER_PERIOD[/"«include» Apply Time Filter"/]
+    UC_VALIDATE_PERIOD[/"«include» Validate Period Limit (1 Year Rule)"/]
+
+    UC_FILTER_PERIOD -.-> UC_VALIDATE_PERIOD
+
+    UC_OPERATIONAL_DASH -.-> UC_LEADS_BY_STATUS
+    UC_OPERATIONAL_DASH -.-> UC_LEADS_BY_SOURCE
+    UC_OPERATIONAL_DASH -.-> UC_LEADS_BY_STORE
+    UC_OPERATIONAL_DASH -.-> UC_LEADS_BY_IMPORTANCE
+    UC_OPERATIONAL_DASH -.-> UC_FILTER_PERIOD
+
+    UC_TEAM_DASH -.-> UC_CONVERSION_RATE
+    UC_TEAM_DASH -.-> UC_LEADS_BY_SOURCE
+    UC_TEAM_DASH -.-> UC_LEADS_BY_IMPORTANCE
+    UC_TEAM_DASH -.-> UC_CLOSE_REASONS
+    UC_TEAM_DASH -.-> UC_LEADS_BY_STATUS
+    UC_TEAM_DASH -.-> UC_LEADS_BY_ATTENDANT
+    UC_TEAM_DASH -.-> UC_FILTER_PERIOD
+
+    UC_GLOBAL_DASH -.-> UC_CONVERSION_RATE
+    UC_GLOBAL_DASH -.-> UC_LEADS_BY_SOURCE
+    UC_GLOBAL_DASH -.-> UC_LEADS_BY_IMPORTANCE
+    UC_GLOBAL_DASH -.-> UC_CLOSE_REASONS
+    UC_GLOBAL_DASH -.-> UC_LEADS_BY_TEAM
+    UC_GLOBAL_DASH -.-> UC_AVG_RESPONSE_TIME
+    UC_GLOBAL_DASH -.-> UC_FILTER_PERIOD
   end
 
-  %% Linha 7 - Auditoria
-  subgraph PKG_AUDIT["Auditoria"]
+  %% ────────────────────────────────────────
+  %% Audit
+  %% ────────────────────────────────────────
+  subgraph PKG_AUDIT["Audit"]
     direction TB
-    UC_LOGS["Visualizar Logs"]
-    UC_AUDIT[/"《include》Registrar Evento de Auditoria"/]
+    UC_VIEW_LOGS["View Audit Logs"]
+    UC_REGISTER_AUDIT[/"«include» Register Audit Event"/]
   end
 
-  %% 🔧 ADIÇÃO GLOBAL (RBAC explícito leve)
-  UC_VALIDATE_RBAC[/"《include》Validar Permissão (RBAC)"/]
+  %% ────────────────────────────────────────
+  %% Authorization
+  %% ────────────────────────────────────────
+  UC_VALIDATE_RBAC[/"«include» Validate Permission (RBAC)"/]
 
 end
 
 %% ═══════════════════════════════════════════
-%%  ASSOCIAÇÕES — ATORES
+%% ACTOR ASSOCIATIONS
 %% ═══════════════════════════════════════════
 
-ATD --> UC_LOGIN
-ATD --> UC_UPD_CRED
-ATD --> UC_CREATE_LEAD
-ATD --> UC_LIST_LEAD_OWN
-ATD --> UC_EDIT_LEAD_OWN
-ATD --> UC_CREATE_CLI
-ATD --> UC_UPD_CLI
-ATD --> UC_CREATE_NEG
-ATD --> UC_STAGE_NEG
-ATD --> UC_STATUS_NEG
-ATD --> UC_CLOSE_NEG
-ATD --> UC_SET_IMPORTANCIA
-ATD --> UC_DASH_OP
+%% Attendant
+ATT --> UC_LOGIN
+ATT --> UC_UPDATE_CREDENTIALS
+ATT --> UC_CREATE_LEAD
+ATT --> UC_LIST_OWN_LEADS
+ATT --> UC_EDIT_OWN_LEAD
+ATT --> UC_CREATE_CUSTOMER
+ATT --> UC_UPDATE_CUSTOMER
+ATT --> UC_CREATE_DEAL
+ATT --> UC_UPDATE_DEAL_STAGE
+ATT --> UC_UPDATE_DEAL_STATUS
+ATT --> UC_CLOSE_DEAL
+ATT --> UC_SET_DEAL_IMPORTANCE
+ATT --> UC_OPERATIONAL_DASH
 
-GER --> UC_LIST_LEAD_TEAM
-GER --> UC_EDIT_LEAD_TEAM
-GER --> UC_REATRIBUIR_LEAD
-GER --> UC_DASH_TEAM
-GER --> UC_VINCULAR_ATD
+%% Manager
+MAN --> UC_LIST_TEAM_LEADS
+MAN --> UC_EDIT_TEAM_LEAD
+MAN --> UC_REASSIGN_LEAD
+MAN --> UC_TEAM_DASH
+MAN --> UC_LINK_ATTENDANT
 
-GG --> UC_DASH_GLOBAL
-GG --> UC_LIST_LEAD_TEAM
-GG --> UC_LOGIN
-GG --> UC_UPD_CRED
+%% General Manager
+GM --> UC_GLOBAL_DASH
+GM --> UC_LIST_TEAM_LEADS
+GM --> UC_LOGIN
+GM --> UC_UPDATE_CREDENTIALS
 
+%% Administrator
 ADM --> UC_USER_ADMIN
 ADM --> UC_TEAM_ADMIN
+ADM --> UC_STORE_ADMIN
 ADM --> UC_LEAD_ADMIN
-ADM --> UC_CLI_ADMIN
-ADM --> UC_LOGS
-ADM --> UC_DASH_GLOBAL
+ADM --> UC_CUSTOMER_ADMIN
+ADM --> UC_VIEW_LOGS
+ADM --> UC_GLOBAL_DASH
 
-%% Sistema
-SIS --> UC_AUDIT
+%% System
+SYS --> UC_REGISTER_AUDIT
 
-%% Auditoria
-UC_AUDIT -.-> UC_CREATE_LEAD
-UC_AUDIT -.-> UC_CREATE_NEG
-UC_AUDIT -.-> UC_CREATE_CLI
-UC_AUDIT -.-> UC_USER_ADMIN
-UC_AUDIT -.-> UC_TEAM_ADMIN
-UC_AUDIT -.-> UC_LOGIN
-UC_AUDIT -.-> UC_EDIT_LEAD_OWN
-UC_AUDIT -.-> UC_EDIT_LEAD_TEAM
-UC_AUDIT -.-> UC_LEAD_ADMIN
-UC_AUDIT -.-> UC_STAGE_NEG
-UC_AUDIT -.-> UC_STATUS_NEG
-UC_AUDIT -.-> UC_CLOSE_NEG
-UC_AUDIT -.-> UC_UPD_CLI
-UC_AUDIT -.-> UC_CLI_ADMIN
+%% ═══════════════════════════════════════════
+%% AUDIT ASSOCIATIONS
+%% ═══════════════════════════════════════════
+UC_REGISTER_AUDIT -.-> UC_LOGIN
+UC_REGISTER_AUDIT -.-> UC_CREATE_LEAD
+UC_REGISTER_AUDIT -.-> UC_EDIT_OWN_LEAD
+UC_REGISTER_AUDIT -.-> UC_EDIT_TEAM_LEAD
+UC_REGISTER_AUDIT -.-> UC_LEAD_ADMIN
+UC_REGISTER_AUDIT -.-> UC_CREATE_CUSTOMER
+UC_REGISTER_AUDIT -.-> UC_UPDATE_CUSTOMER
+UC_REGISTER_AUDIT -.-> UC_CUSTOMER_ADMIN
+UC_REGISTER_AUDIT -.-> UC_CREATE_DEAL
+UC_REGISTER_AUDIT -.-> UC_UPDATE_DEAL_STAGE
+UC_REGISTER_AUDIT -.-> UC_UPDATE_DEAL_STATUS
+UC_REGISTER_AUDIT -.-> UC_CLOSE_DEAL
+UC_REGISTER_AUDIT -.-> UC_USER_ADMIN
+UC_REGISTER_AUDIT -.-> UC_TEAM_ADMIN
 
-%% 🔧 RBAC aplicado em operações críticas
+%% ═══════════════════════════════════════════
+%% RBAC ASSOCIATIONS
+%% ═══════════════════════════════════════════
 UC_CREATE_LEAD -.-> UC_VALIDATE_RBAC
-UC_EDIT_LEAD_OWN -.-> UC_VALIDATE_RBAC
-UC_EDIT_LEAD_TEAM -.-> UC_VALIDATE_RBAC
-UC_CREATE_NEG -.-> UC_VALIDATE_RBAC
+UC_EDIT_OWN_LEAD -.-> UC_VALIDATE_RBAC
+UC_EDIT_TEAM_LEAD -.-> UC_VALIDATE_RBAC
+UC_CREATE_CUSTOMER -.-> UC_VALIDATE_RBAC
+UC_UPDATE_CUSTOMER -.-> UC_VALIDATE_RBAC
+UC_CREATE_DEAL -.-> UC_VALIDATE_RBAC
+UC_UPDATE_DEAL_STAGE -.-> UC_VALIDATE_RBAC
+UC_UPDATE_DEAL_STATUS -.-> UC_VALIDATE_RBAC
+UC_CLOSE_DEAL -.-> UC_VALIDATE_RBAC
 UC_USER_ADMIN -.-> UC_VALIDATE_RBAC
 UC_TEAM_ADMIN -.-> UC_VALIDATE_RBAC
-UC_CLI_ADMIN -.-> UC_VALIDATE_RBAC
+UC_STORE_ADMIN -.-> UC_VALIDATE_RBAC
+UC_LEAD_ADMIN -.-> UC_VALIDATE_RBAC
+UC_CUSTOMER_ADMIN -.-> UC_VALIDATE_RBAC
+UC_VIEW_LOGS -.-> UC_VALIDATE_RBAC
+UC_TEAM_DASH -.-> UC_VALIDATE_RBAC
+UC_GLOBAL_DASH -.-> UC_VALIDATE_RBAC

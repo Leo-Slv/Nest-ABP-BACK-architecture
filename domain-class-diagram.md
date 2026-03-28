@@ -3,7 +3,16 @@
 Este diagrama representa a camada de domínio observável no código atual. O foco está nos agregados, value objects, enums, eventos de domínio, interfaces de repositório, factories e specifications realmente implementados.
 
 ```mermaid
+---
+config:
+  layout: elk
+---
 classDiagram
+direction RL
+
+%% =========================================================
+%% SHARED CORE
+%% =========================================================
 
 class AggregateRoot {
   -DomainEvent[] _domainEvents
@@ -15,10 +24,14 @@ class DomainEvent {
   +occurredAt: Date
 }
 
-class Specification~T~ {
+class Specification {
   <<interface>>
   +isSatisfiedBy(candidate: T) boolean
 }
+
+%% =========================================================
+%% SHARED VALUE OBJECTS
+%% =========================================================
 
 class Name {
   -_value: string
@@ -35,19 +48,31 @@ class Phone {
   +value: string
 }
 
+class PasswordHash {
+  -_value: string
+  +value: string
+}
+
 class LeadSource {
   -_value: string
   +value: string
 }
 
-class DomainUrl {
+class CloseReason {
   -_value: string
   +value: string
 }
 
-class DealValue {
-  -_value: number
-  +value: number
+%% =========================================================
+%% ENUMS
+%% =========================================================
+
+class UserRole {
+  <<enumeration>>
+  ATTENDANT
+  MANAGER
+  GENERAL_MANAGER
+  ADMINISTRATOR
 }
 
 class LeadStatus {
@@ -59,280 +84,384 @@ class LeadStatus {
   CONVERTED
 }
 
-class DealStage {
+class DealStatus {
   <<enumeration>>
-  LEAD
-  QUALIFIED
-  PROPOSAL
-  NEGOTIATION
+  OPEN
   WON
   LOST
 }
 
-class TaskType {
+class DealStage {
   <<enumeration>>
-  CALL
-  EMAIL
-  MEETING
-  FOLLOW_UP
-  OTHER
+  INITIAL_CONTACT
+  NEGOTIATION
+  PROPOSAL
+  CLOSING
+}
+
+class DealImportance {
+  <<enumeration>>
+  COLD
+  WARM
+  HOT
+}
+
+class AuditActionType {
+  <<enumeration>>
+  LOGIN
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  STAGE_CHANGE
+}
+
+%% =========================================================
+%% DOMAIN ENTITIES / AGGREGATES
+%% =========================================================
+
+class User {
+  +id: UUID
+  +name: Name
+  +email: Email
+  +passwordHash: PasswordHash
+  +role: UserRole
+  +teamId: int?
+  +changeName(name: Name) void
+  +changeEmail(email: Email) void
+  +changePassword(passwordHash: PasswordHash) void
+  +assignToTeam(teamId: int) void
+  +changeRole(role: UserRole) void
+}
+
+class Team {
+  +id: int
+  +name: Name
+  +managerId: UUID?
+  +changeName(name: Name) void
+  +assignManager(userId: UUID) void
+}
+
+class Store {
+  +id: int
+  +name: Name
+  +changeName(name: Name) void
+}
+
+class Customer {
+  +id: UUID
+  +name: Name
+  +email: Email?
+  +phone: Phone?
+  +changeName(name: Name) void
+  +changeEmail(email: Email?) void
+  +changePhone(phone: Phone?) void
 }
 
 class Lead {
-  +id: string
-  +name: string
-  +emailValue: string
-  +phoneValue: string?
-  +sourceValue: string?
+  +id: UUID
+  +customerId: UUID
+  +storeId: int
+  +ownerUserId: UUID
+  +source: LeadSource
   +status: LeadStatus
-  +contactId: string?
-  +changeEmail(email: Email) void
-  +changeName(name: Name) void
-  +changePhone(phone: Phone?) void
-  +changeSource(source: LeadSource?) void
+  +changeSource(source: LeadSource) void
   +changeStatus(status: LeadStatus) void
-  +changeNotes(notes: string?) void
-  +markAsConverted(contactId: string) void
-  +toPersistence() object
-}
-
-class Contact {
-  +id: string
-  +name: string
-  +email: string
-  +companyId: string?
-  +applyUpdate(input) void
-  +markDeleted() void
-  +toPersistence() ContactProps
-}
-
-class Company {
-  +id: string
-  +name: string
-  +domain: string?
-  +applyUpdate(input) void
-  +markDeleted() void
-  +toPersistence() CompanyProps
+  +reassignOwner(userId: UUID) void
+  +assignToStore(storeId: int) void
+  +convert() void
 }
 
 class Deal {
-  +id: string
-  +title: string
-  +value: number
+  +id: UUID
+  +leadId: UUID
+  +status: DealStatus
   +stage: DealStage
-  +pipelineId: string?
-  +pipelineStageId: string?
-  +contactId: string?
-  +companyId: string?
-  +applyUpdate(input) void
-  +moveToStage(stage: DealStage, pipelineStageId: string) void
-  +toPersistence() DealEntity
+  +importance: DealImportance
+  +closeReason: CloseReason?
+  +setImportance(importance: DealImportance) void
+  +markAsOpen() void
+  +changeStage(stage: DealStage) void
+  +changeStatus(status: DealStatus) void
+  +close(reason: CloseReason) void
 }
 
-class Pipeline {
-  +id: string
-  +name: string
-  +stages: PipelineStage[]
-  +getPendingStagesForCreate() object[]
-  +changeName(name: string) void
-  +toPersistence() PipelineEntity
+class DealHistory {
+  +id: int
+  +dealId: UUID
+  +changedByUserId: UUID
+  +previousStatus: DealStatus?
+  +newStatus: DealStatus?
+  +previousStage: DealStage?
+  +newStage: DealStage?
+  +changedAt: Date
 }
 
-class PipelineStage {
-  +id: string
-  +name: string
-  +order: number
-  +pipelineId: string
+class AuditLog {
+  +id: hash
+  +actorUserId: UUID
+  +actionType: AuditActionType
+  +entityName: string
+  +entityId: string
+  +createdAt: Date
 }
 
-class Task {
-  +id: string
-  +title: string
-  +type: TaskType
-  +leadId: string?
-  +contactId: string?
-  +companyId: string?
-  +dealId: string?
-  +applyUpdate(input) void
-  +markComplete() void
-  +markDeleted() void
-  +toPersistence() TaskEntity
+%% =========================================================
+%% REPOSITORY INTERFACES
+%% =========================================================
+
+class IUserRepository {
+  <<interface>>
+  +create(user: User) Promise~User~
+  +update(user: User) Promise~User~
+  +delete(id: UUID) Promise~void~
+  +findById(id: UUID) Promise~User?~
+  +findByEmail(email: string) Promise~User?~
+  +list() Promise~User[]~
+}
+
+class ITeamRepository {
+  <<interface>>
+  +create(team: Team) Promise~Team~
+  +update(team: Team) Promise~Team~
+  +delete(id: int) Promise~void~
+  +findById(id: int) Promise~Team?~
+  +list() Promise~Team[]~
+}
+
+class IStoreRepository {
+  <<interface>>
+  +create(store: Store) Promise~Store~
+  +update(store: Store) Promise~Store~
+  +delete(id: int) Promise~void~
+  +findById(id: int) Promise~Store?~
+  +list() Promise~Store[]~
+}
+
+class ICustomerRepository {
+  <<interface>>
+  +create(customer: Customer) Promise~Customer~
+  +update(customer: Customer) Promise~Customer~
+  +delete(id: UUID) Promise~void~
+  +findById(id: UUID) Promise~Customer?~
+  +findByEmail(email: string) Promise~Customer?~
+  +list() Promise~Customer[]~
 }
 
 class ILeadRepository {
   <<interface>>
   +create(lead: Lead) Promise~Lead~
   +update(lead: Lead) Promise~Lead~
-  +delete(id: string) Promise~void~
-  +findById(id: string) Promise~Lead?~
-  +findByEmail(email: string) Promise~Lead?~
-  +list(params: ListLeadsParams) Promise~ListLeadsResult~
-  +convert(leadId: string) Promise~Lead~
-}
-
-class IContactRepository {
-  <<interface>>
-  +create(contact: Contact) Promise~Contact~
-  +update(contact: Contact) Promise~Contact~
-  +delete(id: string) Promise~void~
-  +findById(id: string) Promise~Contact?~
-  +findByEmail(email: string) Promise~Contact?~
-  +list(params: ListContactsParams) Promise~ListContactsResult~
-}
-
-class ICompanyRepository {
-  <<interface>>
-  +create(company: Company) Promise~Company~
-  +update(company: Company) Promise~Company~
-  +delete(id: string) Promise~void~
-  +findById(id: string) Promise~Company?~
-  +findByDomain(domain: string) Promise~Company?~
-  +list(params: ListCompaniesParams) Promise~ListCompaniesResult~
+  +delete(id: UUID) Promise~void~
+  +findById(id: UUID) Promise~Lead?~
+  +listByOwner(userId: UUID) Promise~Lead[]~
+  +listByTeam(teamId: int) Promise~Lead[]~
 }
 
 class IDealRepository {
   <<interface>>
   +create(deal: Deal) Promise~Deal~
   +update(deal: Deal) Promise~Deal~
-  +delete(id: string) Promise~void~
-  +findById(id: string) Promise~Deal?~
-  +list(params: ListDealsParams) Promise~ListDealsResult~
+  +delete(id: UUID) Promise~void~
+  +findById(id: UUID) Promise~Deal?~
+  +findActiveByLeadId(leadId: UUID) Promise~Deal?~
+  +list() Promise~Deal[]~
 }
 
-class IPipelineRepository {
+class IAuditLogRepository {
   <<interface>>
-  +create(pipeline: Pipeline) Promise~Pipeline~
-  +update(pipeline: Pipeline) Promise~Pipeline~
-  +delete(id: string) Promise~void~
-  +findById(id: string) Promise~Pipeline?~
-  +list(params) Promise~ListPipelinesResult~
+  +create(log: AuditLog) Promise~AuditLog~
+  +list() Promise~AuditLog[]~
 }
 
-class ITaskRepository {
-  <<interface>>
-  +create(task: Task) Promise~Task~
-  +update(task: Task) Promise~Task~
-  +delete(id: string) Promise~void~
-  +findById(id: string) Promise~Task?~
-  +list(params: ListTasksParams) Promise~ListTasksResult~
-}
+%% =========================================================
+%% FACTORIES
+%% =========================================================
 
 class LeadFactory {
   +create(input: CreateLeadInput) Lead
 }
 
-class ContactFactory {
-  +create(input: CreateContactInput) Contact
-}
-
-class CompanyFactory {
-  +create(input: CreateCompanyInput) Company
+class CustomerFactory {
+  +create(input: CreateCustomerInput) Customer
 }
 
 class DealFactory {
   +create(input: CreateDealInput) Deal
 }
 
-class PipelineFactory {
-  +create(input: CreatePipelineInput) Pipeline
+class UserFactory {
+  +create(input: CreateUserInput) User
 }
 
-class TaskFactory {
-  +create(input: CreateTaskInput) Task
+%% =========================================================
+%% SPECIFICATIONS
+%% =========================================================
+
+class UserEmailUniqueSpec {
+  +isSatisfiedBy(email: Email, excludeUserId: UUID?) Promise~boolean~
 }
 
-class LeadEmailUniqueSpec {
-  +isSatisfiedBy(email: Email, excludeLeadId: string) Promise~boolean~
-  +isViolatedBy(email: Email, excludeLeadId: string) Promise~boolean~
+class CustomerEmailUniqueSpec {
+  +isSatisfiedBy(email: Email, excludeCustomerId: UUID?) Promise~boolean~
 }
 
-class ContactEmailUniqueSpec {
-  +isSatisfiedBy(email: Email, excludeContactId: string) Promise~boolean~
+class SingleActiveDealPerLeadSpec {
+  +isSatisfiedBy(leadId: UUID, excludeDealId: UUID?) Promise~boolean~
 }
 
-class CompanyDomainUniqueSpec {
-  +isSatisfiedBy(domain: DomainUrl, excludeCompanyId: string) Promise~boolean~
+%% =========================================================
+%% DOMAIN EVENTS
+%% =========================================================
+
+class LeadRegisteredEvent {
+  +leadId: UUID
 }
 
-class LeadCreatedEvent {
-  +leadId: string
+class LeadReassignedEvent {
+  +leadId: UUID
+  +ownerUserId: UUID
 }
 
-class LeadUpdatedEvent {
-  +leadId: string
+class LeadConvertedEvent {
+  +leadId: UUID
 }
 
-class DealStageMovedEvent {
-  +dealId: string
+class DealCreatedEvent {
+  +dealId: UUID
+}
+
+class DealStageChangedEvent {
+  +dealId: UUID
   +stage: DealStage
 }
 
-class TaskCompletedEvent {
-  +taskId: string
+class DealStatusChangedEvent {
+  +dealId: UUID
+  +status: DealStatus
 }
 
+class DealClosedEvent {
+  +dealId: UUID
+  +reason: string
+}
+
+class UserAuthenticatedEvent {
+  +userId: UUID
+}
+
+%% =========================================================
+%% INHERITANCE
+%% =========================================================
+
+AggregateRoot <|-- User
+AggregateRoot <|-- Team
+AggregateRoot <|-- Store
+AggregateRoot <|-- Customer
 AggregateRoot <|-- Lead
-AggregateRoot <|-- Contact
-AggregateRoot <|-- Company
 AggregateRoot <|-- Deal
-AggregateRoot <|-- Pipeline
-AggregateRoot <|-- Task
+AggregateRoot <|-- AuditLog
+
 AggregateRoot o-- "0..*" DomainEvent
 
-DomainEvent <|-- LeadCreatedEvent
-DomainEvent <|-- LeadUpdatedEvent
-DomainEvent <|-- DealStageMovedEvent
-DomainEvent <|-- TaskCompletedEvent
+DomainEvent <|-- LeadRegisteredEvent
+DomainEvent <|-- LeadReassignedEvent
+DomainEvent <|-- LeadConvertedEvent
+DomainEvent <|-- DealCreatedEvent
+DomainEvent <|-- DealStageChangedEvent
+DomainEvent <|-- DealStatusChangedEvent
+DomainEvent <|-- DealClosedEvent
+DomainEvent <|-- UserAuthenticatedEvent
 
-Lead *-- Name
-Lead *-- Email
-Lead o-- Phone
-Lead o-- LeadSource
+%% =========================================================
+%% ENTITY / VO RELATIONS
+%% =========================================================
+
+User *-- Name
+User *-- Email
+User *-- PasswordHash
+User --> UserRole
+User ..> Team : teamId
+
+Team *-- Name
+Team ..> User : managerId
+
+Store *-- Name
+
+Customer *-- Name
+Customer o-- Email
+Customer o-- Phone
+
+Lead *-- LeadSource
 Lead --> LeadStatus
-Lead ..> Contact : contactId
+Lead ..> Customer : customerId
+Lead ..> Store : storeId
+Lead ..> User : ownerUserId
 
-Contact ..> Company : companyId
+Deal --> DealStatus
 Deal --> DealStage
-Deal ..> Pipeline : pipelineId
-Deal ..> PipelineStage : pipelineStageId
-Deal ..> Contact : contactId
-Deal ..> Company : companyId
-Pipeline *-- "0..*" PipelineStage
-Task --> TaskType
-Task ..> Lead : leadId
-Task ..> Contact : contactId
-Task ..> Company : companyId
-Task ..> Deal : dealId
+Deal --> DealImportance
+Deal o-- CloseReason
+Deal ..> Lead : leadId
+
+DealHistory --> DealStatus
+DealHistory --> DealStage
+DealHistory ..> Deal : dealId
+DealHistory ..> User : changedByUserId
+
+AuditLog --> AuditActionType
+AuditLog ..> User : actorUserId
+
+%% =========================================================
+%% FACTORY DEPENDENCIES
+%% =========================================================
 
 LeadFactory ..> Lead
-LeadFactory ..> Name
-LeadFactory ..> Email
-LeadFactory ..> Phone
 LeadFactory ..> LeadSource
-ContactFactory ..> Contact
-ContactFactory ..> Name
-ContactFactory ..> Email
-ContactFactory ..> Phone
-CompanyFactory ..> Company
-CompanyFactory ..> Name
-CompanyFactory ..> DomainUrl
-DealFactory ..> Deal
-DealFactory ..> DealValue
-DealFactory ..> DealStage
-PipelineFactory ..> Pipeline
-PipelineFactory ..> Name
-TaskFactory ..> Task
-TaskFactory ..> TaskType
 
-Specification <|.. LeadEmailUniqueSpec
-Specification <|.. ContactEmailUniqueSpec
-Specification <|.. CompanyDomainUniqueSpec
-LeadEmailUniqueSpec ..> ILeadRepository
-LeadEmailUniqueSpec ..> Email
-ContactEmailUniqueSpec ..> IContactRepository
-ContactEmailUniqueSpec ..> Email
-CompanyDomainUniqueSpec ..> ICompanyRepository
-CompanyDomainUniqueSpec ..> DomainUrl
+CustomerFactory ..> Customer
+CustomerFactory ..> Name
+CustomerFactory ..> Email
+CustomerFactory ..> Phone
+
+DealFactory ..> Deal
+DealFactory ..> DealStatus
+DealFactory ..> DealStage
+DealFactory ..> DealImportance
+DealFactory ..> CloseReason
+
+UserFactory ..> User
+UserFactory ..> Name
+UserFactory ..> Email
+UserFactory ..> PasswordHash
+UserFactory ..> UserRole
+
+%% =========================================================
+%% SPECIFICATION DEPENDENCIES
+%% =========================================================
+
+Specification <|.. UserEmailUniqueSpec
+Specification <|.. CustomerEmailUniqueSpec
+Specification <|.. SingleActiveDealPerLeadSpec
+
+UserEmailUniqueSpec ..> IUserRepository
+UserEmailUniqueSpec ..> Email
+
+CustomerEmailUniqueSpec ..> ICustomerRepository
+CustomerEmailUniqueSpec ..> Email
+
+SingleActiveDealPerLeadSpec ..> IDealRepository
+
+%% =========================================================
+%% CONCEPTUAL AGGREGATE RELATIONS
+%% =========================================================
+
+Team "1" o-- "0..*" User : members
+Store "1" o-- "0..*" Lead : receives
+Customer "1" o-- "0..*" Lead : owns
+User "1" o-- "0..*" Lead : handles
+Lead "1" o-- "0..1" Deal : active deal
+Deal "1" o-- "0..*" DealHistory : history
 ```
 
 ## Observações

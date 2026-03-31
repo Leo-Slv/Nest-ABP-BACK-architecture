@@ -1,8 +1,3 @@
-# Diagrama de Classe de Implementação / Persistência / ORM
-
-Este diagrama representa a visão técnica atual do projeto: controllers, use cases, factories de repositório, repositórios SQL concretos, mappers, `UnitOfWork`, dispatcher de eventos e os modelos persistidos definidos no `schema.prisma`. O fluxo principal foi detalhado com Leads, e os demais módulos aparecem como a mesma estratégia arquitetural já implementada.
-
-```mermaid
 ---
 config:
   layout: elk
@@ -486,6 +481,74 @@ direction TB
 	    +createdAt: Date
     }
 
+    class OutboxEventRecord {
+    +id: UUID
+    +eventName: string
+    +payload: string
+    +occurredAt: Date
+    +processedAt: Date?
+}
+
+    class IDomainEventDispatcher {
+	    +dispatch(events: DomainEvent[]) Promise~void~
+    }
+
+    class DomainEventDispatcher {
+	    +dispatch(events: DomainEvent[]) Promise~void~
+    }
+
+    class OutboxEvent {
+	    +id: UUID
+	    +eventName: string
+	    +payload: string
+	    +occurredAt: Date
+	    +processedAt: Date?
+    }
+
+    class OutboxEventProcessor {
+	    +processPending() Promise~void~
+    }
+
+    class IDomainEventHandler {
+	    +handle(event: DomainEvent) Promise~void~
+    }
+
+    class LeadRegisteredEvent {
+	    +leadId: UUID
+    }
+
+    class LeadReassignedEvent {
+	    +leadId: UUID
+	    +ownerUserId: UUID
+    }
+
+    class LeadConvertedEvent {
+	    +leadId: UUID
+    }
+
+    class DealCreatedEvent {
+	    +dealId: UUID
+    }
+
+    class DealStageChangedEvent {
+	    +dealId: UUID
+	    +stage: DealStage
+    }
+
+    class DealStatusChangedEvent {
+	    +dealId: UUID
+	    +status: DealStatus
+    }
+
+    class DealClosedEvent {
+	    +dealId: UUID
+	    +reason: string
+    }
+
+    class UserAuthenticatedEvent {
+	    +userId: UUID
+    }
+
 	<<interface>> Specification
 	<<interface>> IUnitOfWork
 	<<enumeration>> UserRole
@@ -509,6 +572,9 @@ direction TB
 	<<PrismaModel>> DealRecord
 	<<PrismaModel>> DealHistoryRecord
 	<<PrismaModel>> AuditLogRecord
+    <<PrismaModel>> OutboxEventRecord
+	<<interface>> IDomainEventDispatcher
+	<<interface>> IDomainEventHandler
 
     IUnitOfWork <|.. UnitOfWork
     UnitOfWork *-- TransactionContext
@@ -519,13 +585,57 @@ direction TB
     AggregateRoot <|-- Lead
     AggregateRoot <|-- Deal
     AggregateRoot <|-- AuditLog
+    AggregateRoot <|-- DealHistory
     AggregateRoot o-- "0..*" DomainEvent
+    DomainEvent <|-- LeadRegisteredEvent
+    DomainEvent <|-- LeadReassignedEvent
+    DomainEvent <|-- LeadConvertedEvent
+    DomainEvent <|-- DealCreatedEvent
+    DomainEvent <|-- DealStageChangedEvent
+    DomainEvent <|-- DealStatusChangedEvent
+    DomainEvent <|-- DealClosedEvent
+    DomainEvent <|-- UserAuthenticatedEvent
     Specification <|.. UserEmailUniqueSpec
     Specification <|.. CustomerEmailUniqueSpec
     Specification <|.. SingleActiveDealPerLeadSpec
     UserEmailUniqueSpec ..> IUserRepository
+    UserEmailUniqueSpec ..> Email
     CustomerEmailUniqueSpec ..> ICustomerRepository
+    CustomerEmailUniqueSpec ..> Email
     SingleActiveDealPerLeadSpec ..> IDealRepository
+    User *-- Name
+    User *-- Email
+    User *-- PasswordHash
+    User --> UserRole
+    User ..> Team : teamId
+    Team *-- Name
+    Team ..> User : managerId
+    Store *-- Name
+    Customer *-- Name
+    Customer o-- Email
+    Customer o-- Phone
+    Lead *-- LeadSource
+    Lead --> LeadStatus
+    Lead ..> Customer : customerId
+    Lead ..> Store : storeId
+    Lead ..> User : ownerUserId
+    Deal --> DealStatus
+    Deal --> DealStage
+    Deal --> DealImportance
+    Deal o-- CloseReason
+    Deal ..> Lead : leadId
+    DealHistory --> DealStatus
+    DealHistory --> DealStage
+    DealHistory ..> Deal : dealId
+    DealHistory ..> User : changedByUserId
+    AuditLog --> AuditActionType
+    AuditLog ..> User : actorUserId
+    Team "1" o-- "0..*" User : members
+    Store "1" o-- "0..*" Lead : receives
+    Customer "1" o-- "0..*" Lead : owns
+    User "1" o-- "0..*" Lead : handles
+    Lead "1" o-- "0..1" Deal : active deal
+    Deal "1" o-- "0..*" DealHistory : history
     LeadController ..> CreateLeadUseCase
     LeadController ..> UpdateLeadUseCase
     LeadController ..> FindLeadUseCase
@@ -541,9 +651,11 @@ direction TB
     CreateLeadUseCase ..> LeadFactory
     CreateLeadUseCase ..> LeadMapper
     CreateLeadUseCase ..> IUnitOfWork
+    CreateLeadUseCase ..> IDomainEventDispatcher
     UpdateLeadUseCase ..> ILeadRepository
     UpdateLeadUseCase ..> LeadMapper
     UpdateLeadUseCase ..> IUnitOfWork
+    UpdateLeadUseCase ..> IDomainEventDispatcher
     FindLeadUseCase ..> ILeadRepository
     FindLeadUseCase ..> LeadMapper
     ListOwnLeadsUseCase ..> ILeadRepository
@@ -553,9 +665,11 @@ direction TB
     ReassignLeadUseCase ..> ILeadRepository
     ReassignLeadUseCase ..> IUserRepository
     ReassignLeadUseCase ..> IUnitOfWork
+    ReassignLeadUseCase ..> IDomainEventDispatcher
     ConvertLeadUseCase ..> ILeadRepository
     ConvertLeadUseCase ..> ICustomerRepository
     ConvertLeadUseCase ..> IUnitOfWork
+    ConvertLeadUseCase ..> IDomainEventDispatcher
     DeleteLeadUseCase ..> ILeadRepository
     DeleteLeadUseCase ..> IUnitOfWork
     LeadMapper ..> Lead
@@ -575,6 +689,13 @@ direction TB
     ICustomerRepository <|.. CustomerSqlRepository
     IDealRepository <|.. DealSqlRepository
     IAuditLogRepository <|.. AuditLogSqlRepository
+    IUserRepository ..> User
+    ITeamRepository ..> Team
+    IStoreRepository ..> Store
+    ICustomerRepository ..> Customer
+    ILeadRepository ..> Lead
+    IDealRepository ..> Deal
+    IAuditLogRepository ..> AuditLog
     UserSqlRepository ..> TransactionContext
     TeamSqlRepository ..> TransactionContext
     StoreSqlRepository ..> TransactionContext
@@ -590,6 +711,7 @@ direction TB
     AuditLogSqlRepository ..> AuditLogRecord
     LeadFactory ..> Lead
     LeadFactory ..> LeadSource
+    LeadFactory ..> LeadStatus
     CustomerFactory ..> Customer
     CustomerFactory ..> Name
     CustomerFactory ..> Email
@@ -604,11 +726,12 @@ direction TB
     UserFactory ..> Email
     UserFactory ..> PasswordHash
     UserFactory ..> UserRole
-```
-
-## Observações
-
-- O projeto usa `PrismaService` e `schema.prisma` como referência de persistência, mas a implementação concreta atual passa por `UnitOfWork` + `TransactionContext` + repositórios SQL (`LeadSqlRepository`, `ContactSqlRepository`, etc.).
-- Não existe `PrismaLeadRepository` ou equivalente no código atual; por isso o diagrama mostra `LeadSqlRepository` e os demais repositórios concretos reais.
-- Os blocos `Prisma*Model` são representações arquiteturais dos modelos de `prisma/schema.prisma`, não classes materializadas manualmente no projeto.
-- O fluxo de eventos observado é: agregado coleta eventos -> use case chama `IDomainEventDispatcher` -> `DomainEventDispatcher` grava em `OutboxEvent` -> `OutboxEventProcessor` lê e despacha para handlers registrados.
+    DomainEventDispatcher ..> OutboxEventRecord
+    OutboxEventProcessor ..> OutboxEventRecord
+    OutboxEvent ..> OutboxEventRecord
+    IDomainEventDispatcher <|.. DomainEventDispatcher
+    DomainEventDispatcher ..> OutboxEvent
+    DomainEventDispatcher ..> DomainEvent
+    OutboxEventProcessor ..> OutboxEvent
+    OutboxEventProcessor ..> IDomainEventHandler
+    IDomainEventHandler ..> DomainEvent

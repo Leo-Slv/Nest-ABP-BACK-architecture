@@ -1,18 +1,9 @@
-# Diagrama de Classe de Domínio
-
-Este diagrama representa a camada de domínio observável no código atual. O foco está nos agregados, value objects, enums, eventos de domínio, interfaces de repositório, factories e specifications realmente implementados.
-
-```mermaid
 ---
 config:
   layout: elk
 ---
 classDiagram
 direction RL
-
-%% =========================================================
-%% SHARED CORE
-%% =========================================================
 
 class AggregateRoot {
   -DomainEvent[] _domainEvents
@@ -28,10 +19,6 @@ class Specification {
   <<interface>>
   +isSatisfiedBy(candidate: T) boolean
 }
-
-%% =========================================================
-%% SHARED VALUE OBJECTS
-%% =========================================================
 
 class Name {
   -_value: string
@@ -62,10 +49,6 @@ class CloseReason {
   -_value: string
   +value: string
 }
-
-%% =========================================================
-%% ENUMS
-%% =========================================================
 
 class UserRole {
   <<enumeration>>
@@ -115,10 +98,6 @@ class AuditActionType {
   STATUS_CHANGE
   STAGE_CHANGE
 }
-
-%% =========================================================
-%% DOMAIN ENTITIES / AGGREGATES
-%% =========================================================
 
 class User {
   +id: UUID
@@ -206,10 +185,6 @@ class AuditLog {
   +createdAt: Date
 }
 
-%% =========================================================
-%% REPOSITORY INTERFACES
-%% =========================================================
-
 class IUserRepository {
   <<interface>>
   +create(user: User) Promise~User~
@@ -274,9 +249,13 @@ class IAuditLogRepository {
   +list() Promise~AuditLog[]~
 }
 
-%% =========================================================
-%% FACTORIES
-%% =========================================================
+IUserRepository ..> User
+ITeamRepository ..> Team
+IStoreRepository ..> Store
+ICustomerRepository ..> Customer
+ILeadRepository ..> Lead
+IDealRepository ..> Deal
+IAuditLogRepository ..> AuditLog
 
 class LeadFactory {
   +create(input: CreateLeadInput) Lead
@@ -294,10 +273,6 @@ class UserFactory {
   +create(input: CreateUserInput) User
 }
 
-%% =========================================================
-%% SPECIFICATIONS
-%% =========================================================
-
 class UserEmailUniqueSpec {
   +isSatisfiedBy(email: Email, excludeUserId: UUID?) Promise~boolean~
 }
@@ -309,10 +284,6 @@ class CustomerEmailUniqueSpec {
 class SingleActiveDealPerLeadSpec {
   +isSatisfiedBy(leadId: UUID, excludeDealId: UUID?) Promise~boolean~
 }
-
-%% =========================================================
-%% DOMAIN EVENTS
-%% =========================================================
 
 class LeadRegisteredEvent {
   +leadId: UUID
@@ -350,10 +321,6 @@ class UserAuthenticatedEvent {
   +userId: UUID
 }
 
-%% =========================================================
-%% INHERITANCE
-%% =========================================================
-
 AggregateRoot <|-- User
 AggregateRoot <|-- Team
 AggregateRoot <|-- Store
@@ -361,6 +328,7 @@ AggregateRoot <|-- Customer
 AggregateRoot <|-- Lead
 AggregateRoot <|-- Deal
 AggregateRoot <|-- AuditLog
+AggregateRoot <|-- DealHistory
 
 AggregateRoot o-- "0..*" DomainEvent
 
@@ -372,10 +340,6 @@ DomainEvent <|-- DealStageChangedEvent
 DomainEvent <|-- DealStatusChangedEvent
 DomainEvent <|-- DealClosedEvent
 DomainEvent <|-- UserAuthenticatedEvent
-
-%% =========================================================
-%% ENTITY / VO RELATIONS
-%% =========================================================
 
 User *-- Name
 User *-- Email
@@ -412,12 +376,9 @@ DealHistory ..> User : changedByUserId
 AuditLog --> AuditActionType
 AuditLog ..> User : actorUserId
 
-%% =========================================================
-%% FACTORY DEPENDENCIES
-%% =========================================================
-
 LeadFactory ..> Lead
 LeadFactory ..> LeadSource
+LeadFactory ..> LeadStatus
 
 CustomerFactory ..> Customer
 CustomerFactory ..> Name
@@ -436,10 +397,6 @@ UserFactory ..> Email
 UserFactory ..> PasswordHash
 UserFactory ..> UserRole
 
-%% =========================================================
-%% SPECIFICATION DEPENDENCIES
-%% =========================================================
-
 Specification <|.. UserEmailUniqueSpec
 Specification <|.. CustomerEmailUniqueSpec
 Specification <|.. SingleActiveDealPerLeadSpec
@@ -452,21 +409,9 @@ CustomerEmailUniqueSpec ..> Email
 
 SingleActiveDealPerLeadSpec ..> IDealRepository
 
-%% =========================================================
-%% CONCEPTUAL AGGREGATE RELATIONS
-%% =========================================================
-
 Team "1" o-- "0..*" User : members
 Store "1" o-- "0..*" Lead : receives
 Customer "1" o-- "0..*" Lead : owns
 User "1" o-- "0..*" Lead : handles
 Lead "1" o-- "0..1" Deal : active deal
 Deal "1" o-- "0..*" DealHistory : history
-```
-
-## Observações
-
-- `Lead` é o agregado com uso mais forte de value objects no estado atual (`Name`, `Email`, `Phone`, `LeadSource`).
-- `Contact`, `Company`, `Deal`, `Pipeline` e `Task` usam majoritariamente tipos primitivos no agregado e concentram normalização nas factories e mappers.
-- As referências entre agregados aparecem no domínio principalmente por ID (`contactId`, `companyId`, `pipelineId`, `dealId` etc.), então foram modeladas como dependências/associações fracas, não como composição forte.
-- O diagrama não representa relacionamentos extras apenas do banco; ele mostra somente o que está claramente expresso na camada de domínio atual.
